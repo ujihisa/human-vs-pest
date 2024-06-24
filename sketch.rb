@@ -5,8 +5,6 @@ class World
   # size_y Integer
   # bases {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
   # unitss {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
-  # unitss[:human] [(Integer, Integer)]
-  # unitss[:pest] [(Integer, Integer)]
   # trees [(Integer, Integer)]
   # ponds [(Integer, Integer)]
   def initialize(size_x:, size_y:, bases:, unitss:, trees:, ponds:)
@@ -95,13 +93,6 @@ class World
   end
 end
 
-# class Player
-#   def initialize(human_or_pest:)
-#     @human_or_pest = human_or_pest
-#   end
-#   attr_reader :human_or_pest
-# end
-
 class Unit
   def initialize(x:, y:, hp:)
     @x = x
@@ -137,8 +128,8 @@ class Game
   def initialize(world:)
     @world = world
     @moneys = {
-      human: 10,
-      pest: 10,
+      human: 0,
+      pest: 0,
     }
     @woods = {
       human: 0,
@@ -148,75 +139,50 @@ class Game
   end
   attr_reader :world, :moneys, :woods, :turn
 
-  def player_actions1
+  # returns [[Symbol, Object]]
+  def player_actions(player)
     player_actions = []
-    if @moneys[:human] >= 2 && !@world.unitss[:human].any? {|unit| [unit.x, unit.y] == @world.bases[:human] }
+    if @moneys[player] >= 2 && !@world.unitss[player].any? {|unit| [unit.x, unit.y] == @world.bases[player] }
       player_actions << [:spawn_unit, nil]
     end
     player_actions
   end
 
-  def player_actions2
-    player_actions = []
-    if @moneys[:pest] >= 2 && !@world.unitss[:pest].any? {|unit| [unit.x, unit.y] == @world.bases[:pest] }
-      player_actions << [:spawn_unit, nil]
-    end
-    player_actions
-  end
-
-  def player_action1!(action)
+  def player_action!(player, action)
     case action
     in [:remove_building, [x, y]]
       raise 'Not implemented yet'
     in [:spawn_unit, nil]
-      raise 'Invalid money' if @moneys[:human] < 2
-      raise 'Invalid base' if @world.unitss[:human].any? {|unit| [unit.x, unit.y] == @world.bases[:human]}
-      @moneys[:human] -= 2
-      @world.unitss[:human] << Unit.new(x: @world.bases[:human][0], y: @world.bases[:human][1], hp: 10)
+      raise 'Invalid money' if @moneys[player] < 2
+      raise 'Invalid base' if @world.unitss[player].any? {|unit| [unit.x, unit.y] == @world.bases[player]}
+      @moneys[player] -= 2
+      @world.unitss[player] << Unit.new(x: @world.bases[player][0], y: @world.bases[player][1], hp: 10)
     end
   end
 
-  def player_action2!(action)
-    case action
-    in [:remove_building, [x, y]]
-      raise 'Not implemented yet'
-    in [:spawn_unit, nil]
-      raise 'Invalid money' if @moneys[:pest] < 2
-      raise 'Invalid base' if @world.unitss[:pest].any? {|unit| [unit.x, unit.y] == @world.bases[:human]}
-      @moneys[:pest] -= 2
-      @world.unitss[:pest] << Unit.new(x: @world.bases[:pest][0], y: @world.bases[:pest][1], hp: 10)
-    end
-  end
-
-  def unit_actions1
-    @world.unitss[:human].flat_map {|unit|
-      unit.moveable(world: @world).map {|xy|
-        [:move_unit, [unit, xy]]
+  # returns [[Symbol, Object]]
+  def unit_actions(player)
+    @world.unitss[player].to_h {|unit|
+      moves = unit.moveable(world: @world).map {|xy|
+        [:move, xy]
       }
+      harvest_woods =
+        if @world.trees.include?([unit.x, unit.y])
+          [[:harvest_wood, nil]]
+        else
+          []
+        end
+      [unit, moves + harvest_woods]
     }
   end
 
-  def unit_actions2
-    @world.unitss[:pest].flat_map {|unit|
-      unit.moveable(world: @world).map {|xy|
-        [:move_unit, [unit, xy]]
-      }
-    }
-  end
-
-  def unit_action1!(action)
+  def unit_action!(player, unit, action)
     case action
-    in [:move_unit, [unit, xy]]
-      raise 'Invalid move' unless unit.moveable(world: @world).include?(xy)
+    in [:move, xy]
       unit.move!(xy)
-    end
-  end
-
-  def unit_action2!(action)
-    case action
-    in [:move_unit, [unit, xy]]
-      raise 'Invalid move' unless unit.moveable(world: @world).include?(xy)
-      unit.move!(xy)
+    in [:harvest_wood, nil]
+      @woods[player] += 3
+      @world.trees.delete([unit.x, unit.y])
     end
   end
 
@@ -237,18 +203,26 @@ end
 game = Game.new(world: World.create(size_x: 4, size_y: 8))
 game.draw
 
-3.times do
-  pa = game.player_actions1.sample
-  game.player_action1!(pa) if pa
+10.times do
+  pa = game.player_actions(:human).sample
+  game.player_action!(:human, pa) if pa
 
-  pa = game.player_actions2.sample
-  game.player_action2!(pa) if pa
+  pa = game.player_actions(:pest).sample
+  game.player_action!(:pest, pa) if pa
 
-  ua = game.unit_actions1.sample
-  game.unit_action1!(ua) if ua
+  uas_by_unit = game.unit_actions(:human)
+  uas_by_unit.each do |u, uas|
+    ua = uas.find { _1 == :harvest_wood }
+    ua ||= uas.sample
+    game.unit_action!(:human, u, ua) if ua
+  end
 
-  ua = game.unit_actions2.sample
-  game.unit_action2!(ua) if ua
+  uas_by_unit = game.unit_actions(:pest)
+  uas_by_unit.each do |u, uas|
+    ua = uas.find { _1 == :harvest_wood }
+    ua ||= uas.sample
+    game.unit_action!(:pest, u, ua) if ua
+  end
 
   game.tick!
   game.draw
