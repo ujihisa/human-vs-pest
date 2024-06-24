@@ -3,20 +3,18 @@
 class World
   # size_x Integer
   # size_y Integer
-  # bases {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
   # unitss {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
   # trees [(Integer, Integer)]
   # ponds [(Integer, Integer)]
-  def initialize(size_x:, size_y:, bases:, unitss:, trees:, ponds:, buildings:)
+  def initialize(size_x:, size_y:, unitss:, trees:, ponds:, buildings:)
     @size_x = size_x
     @size_y = size_y
-    @bases = bases
     @unitss = unitss
     @trees = trees
     @ponds = ponds
     @buildings = buildings
   end
-  attr_reader :size_x, :size_y, :bases, :unitss, :trees, :ponds, :buildings
+  attr_reader :size_x, :size_y, :unitss, :trees, :ponds, :buildings
 
   def self.create(size_x:, size_y:)
     bases = {
@@ -44,12 +42,14 @@ class World
 
     buildings = {
       human: {
+        base: [bases[:human]],
         fruits: [],
         flowers: [],
         seeds: [],
         seeds0: [],
       },
       pest: {
+        base: [bases[:pest]],
         fruits: [],
         flowers: [],
         seeds: [],
@@ -60,7 +60,6 @@ class World
     new(
       size_x: size_x,
       size_y: size_y,
-      bases: bases,
       unitss: {
         human: [Unit.new(x: bases[:human][0], y: bases[:human][1], hp: 10)],
         pest: [Unit.new(x: bases[:pest][0], y: bases[:pest][1], hp: 10)],
@@ -79,30 +78,49 @@ class World
     @size_y.times do |y|
       print '|'
       @size_x.times do |x|
+        # emoji_table = {
+        #   ponds: '🌊',
+        #   trees: '🌲',
+        #   bases: {
+        #     human: '🏠',
+        #     pest: '🪺',
+        #   },
+        #   unitss: {
+        #     human: '🧍',
+        #     pest: '🐛',
+        #   },
+        # }
+        building_table = {
+          human: {
+            base: '🏠',
+            fruits: '🍓',
+            flowers: '🌷',
+            seeds: '🌱',
+            seeds0: '🌱',
+          },
+          pest: {
+            base: '🪺',
+            fruits: '🍄',
+            flowers: '🦠',
+            seeds: '🧬',
+            seeds0: '🧬',
+          }
+        }
         building =
           case [x, y]
-          when @bases[:human]
-            '🏠'
-          when @bases[:pest]
-            '🪺'
           when *@ponds
             '🌊'
           when *@trees
             '🌲'
-          when *@buildings[:human][:fruits]
-            '🍓'
-          when *@buildings[:pest][:fruits]
-            '🍄'
-          when *@buildings[:human][:flowers]
-            '🌷'
-          when *@buildings[:pest][:flowers]
-            '🦠'
-          when *@buildings[:human][:seeds], *@buildings[:human][:seeds0]
-            '🌱'
-          when *@buildings[:pest][:seeds], *@buildings[:pest][:seeds0]
-            '🧬'
           else
-            '　'
+            q = @buildings.filter_map {|p, bs|
+              bs.filter_map {|b, xys|
+                if xys.include?([x, y])
+                  building_table[p][b]
+                end
+              }.first
+            }.first
+            q ? q : '　'
           end
         unit =
           case [x, y]
@@ -213,10 +231,8 @@ class Game
   end
 
   private def vacant?(xy)
-    farms = @world.buildings.values.flat_map { _1[:seeds] }
-    pp farms
-    pp (@world.bases.values + @world.trees + @world.ponds + farms)
-    !(@world.bases.values + @world.trees + @world.ponds + farms).include?(xy)
+    buildings = @world.buildings.values.flat_map { _1.values.flatten(1) }
+    !(@world.trees + @world.ponds + buildings).include?(xy)
   end
 
   def unit_action!(player, unit, action)
@@ -251,7 +267,7 @@ end
 game = Game.new(world: World.create(size_x: 4, size_y: 8))
 game.draw
 
-50.times do
+10.times do
   pa = game.player_actions(:human).sample
   game.player_action!(:human, pa) if pa
 
