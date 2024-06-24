@@ -44,10 +44,16 @@ class World
 
     buildings = {
       human: {
+        fruits: [],
+        flowers: [],
         seeds: [],
+        seeds0: [],
       },
       pest: {
+        fruits: [],
+        flowers: [],
         seeds: [],
+        seeds0: [],
       },
     }
 
@@ -83,10 +89,18 @@ class World
             '🌊'
           when *@trees
             '🌲'
-          when *@buildings[:human][:seeds]
-            '🌱'
-          when *@buildings[:pest][:seeds]
+          when *@buildings[:human][:fruits]
+            '🍓'
+          when *@buildings[:pest][:fruits]
+            '🍄'
+          when *@buildings[:human][:flowers]
+            '🌷'
+          when *@buildings[:pest][:flowers]
             '🦠'
+          when *@buildings[:human][:seeds], *@buildings[:human][:seeds0]
+            '🌱'
+          when *@buildings[:pest][:seeds], *@buildings[:pest][:seeds0]
+            '🧬'
           else
             '　'
           end
@@ -189,13 +203,20 @@ class Game
           []
         end
       farming =
-        if !(@world.bases.values + @world.trees + @world.ponds + @world.buildings.values.flat_map { _1[:seeds] }).include?([unit.x, unit.y])
+        if vacant?([unit.x, unit.y])
           [[:farming, nil]]
         else
           []
         end
       [unit, moves + harvest_woods + farming]
     }
+  end
+
+  private def vacant?(xy)
+    farms = @world.buildings.values.flat_map { _1[:seeds] }
+    pp farms
+    pp (@world.bases.values + @world.trees + @world.ponds + farms)
+    !(@world.bases.values + @world.trees + @world.ponds + farms).include?(xy)
   end
 
   def unit_action!(player, unit, action)
@@ -206,11 +227,14 @@ class Game
       @woods[player] += 3
       @world.trees.delete([unit.x, unit.y])
     in [:farming, nil]
-      @world.buildings[player][:seeds] << [unit.x, unit.y]
+      @world.buildings[player][:seeds0] << [unit.x, unit.y]
     end
   end
 
   def tick!
+    @world.buildings.each do |_, b|
+      (b[:fruits], b[:flowers], b[:seeds], b[:seeds0]) = [b[:fruits] + b[:flowers], b[:seeds], b[:seeds0], []]
+    end
     @turn += 1
   end
 
