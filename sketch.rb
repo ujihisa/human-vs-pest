@@ -171,8 +171,8 @@ class Game
   def initialize(world:)
     @world = world
     @moneys = {
-      human: 10,
-      pest: 10,
+      human: 0,
+      pest: 0,
     }
     @woods = {
       human: 0,
@@ -186,7 +186,9 @@ class Game
   # returns [[Symbol, Object]]
   def player_actions(player)
     player_actions = []
-    if @moneys[player] >= 2 && !@world.unitss[player].any? {|unit| @world.buildings[player][:base].include?(unit.xy) }
+    cost = @world.unitss[player].size ** 2
+
+    if @moneys[player] >= cost && !@world.unitss[player].any? {|unit| @world.buildings[player][:base].include?(unit.xy) }
       player_actions << [:spawn_unit, nil]
     end
     player_actions
@@ -197,7 +199,9 @@ class Game
     in [:remove_building, [x, y]]
       raise 'Not implemented yet'
     in [:spawn_unit, nil]
-      @moneys[player] -= 2
+      cost = @world.unitss[player].size ** 2
+
+      @moneys[player] -= cost
       @world.unitss[player] << Unit.new(xy: @world.buildings[player][:base][0], hp: 10)
     end
   end
@@ -220,7 +224,13 @@ class Game
         else
           []
         end
-      [unit, moves + harvest_woods + farming]
+      harvest_fruit =
+        if @world.buildings[player][:fruits].include?(unit.xy)
+          [[:harvest_fruit, nil]]
+        else
+          []
+        end
+      [unit, moves + harvest_woods + farming + harvest_fruit]
     }
   end
 
@@ -238,6 +248,9 @@ class Game
       @world.trees.delete(unit.xy)
     in [:farming, nil]
       @world.buildings[player][:seeds0] << unit.xy
+    in [:harvest_fruit, nil]
+      @world.buildings[player][:fruits].delete(unit.xy)
+      @moneys[player] += 3
     end
   end
 
@@ -258,10 +271,10 @@ class Game
   end
 end
 
-game = Game.new(world: World.create(size_x: 4, size_y: 8))
+game = Game.new(world: World.create(size_x: 5, size_y: 8))
 game.draw
 
-10.times do
+50.times do
   pa = game.player_actions(:human).sample
   game.player_action!(:human, pa) if pa
 
