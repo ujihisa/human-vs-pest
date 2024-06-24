@@ -7,15 +7,16 @@ class World
   # unitss {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
   # trees [(Integer, Integer)]
   # ponds [(Integer, Integer)]
-  def initialize(size_x:, size_y:, bases:, unitss:, trees:, ponds:)
+  def initialize(size_x:, size_y:, bases:, unitss:, trees:, ponds:, buildings:)
     @size_x = size_x
     @size_y = size_y
     @bases = bases
     @unitss = unitss
     @trees = trees
     @ponds = ponds
+    @buildings = buildings
   end
-  attr_reader :size_x, :size_y, :bases, :unitss, :trees, :ponds
+  attr_reader :size_x, :size_y, :bases, :unitss, :trees, :ponds, :buildings
 
   def self.create(size_x:, size_y:)
     bases = {
@@ -41,6 +42,15 @@ class World
       } or raise 'Could not find a suitable pond location'
     }
 
+    buildings = {
+      human: {
+        seeds: [],
+      },
+      pest: {
+        seeds: [],
+      },
+    }
+
     new(
       size_x: size_x,
       size_y: size_y,
@@ -51,6 +61,7 @@ class World
       },
       trees: trees,
       ponds: ponds,
+      buildings: buildings,
     )
   end
 
@@ -72,6 +83,10 @@ class World
             '🌊'
           when *@trees
             '🌲'
+          when *@buildings[:human][:seeds]
+            '🌱'
+          when *@buildings[:pest][:seeds]
+            '🦠'
           else
             '　'
           end
@@ -135,6 +150,7 @@ class Game
       human: 0,
       pest: 0,
     }
+
     @turn = 0
   end
   attr_reader :world, :moneys, :woods, :turn
@@ -168,11 +184,17 @@ class Game
       }
       harvest_woods =
         if @world.trees.include?([unit.x, unit.y])
-          [[:harvest_wood, nil]]
+          [[:harvest_woods, nil]]
         else
           []
         end
-      [unit, moves + harvest_woods]
+      farming =
+        if !(@world.bases.values + @world.trees + @world.ponds + @world.buildings.values.flat_map { _1[:seeds] }).include?([unit.x, unit.y])
+          [[:farming, nil]]
+        else
+          []
+        end
+      [unit, moves + harvest_woods + farming]
     }
   end
 
@@ -180,9 +202,11 @@ class Game
     case action
     in [:move, xy]
       unit.move!(xy)
-    in [:harvest_wood, nil]
+    in [:harvest_woods, nil]
       @woods[player] += 3
       @world.trees.delete([unit.x, unit.y])
+    in [:farming, nil]
+      @world.buildings[player][:seeds] << [unit.x, unit.y]
     end
   end
 
@@ -203,7 +227,7 @@ end
 game = Game.new(world: World.create(size_x: 4, size_y: 8))
 game.draw
 
-10.times do
+50.times do
   pa = game.player_actions(:human).sample
   game.player_action!(:human, pa) if pa
 
@@ -212,14 +236,14 @@ game.draw
 
   uas_by_unit = game.unit_actions(:human)
   uas_by_unit.each do |u, uas|
-    ua = uas.find { _1 == :harvest_wood }
+    ua = uas.find { _1[0] != :move }
     ua ||= uas.sample
     game.unit_action!(:human, u, ua) if ua
   end
 
   uas_by_unit = game.unit_actions(:pest)
   uas_by_unit.each do |u, uas|
-    ua = uas.find { _1 == :harvest_wood }
+    ua = uas.find { _1[0] != :move }
     ua ||= uas.sample
     game.unit_action!(:pest, u, ua) if ua
   end
