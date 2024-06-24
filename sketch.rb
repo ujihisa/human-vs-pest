@@ -61,8 +61,8 @@ class World
       size_x: size_x,
       size_y: size_y,
       unitss: {
-        human: [Unit.new(x: bases[:human][0], y: bases[:human][1], hp: 10)],
-        pest: [Unit.new(x: bases[:pest][0], y: bases[:pest][1], hp: 10)],
+        human: [Unit.new(xy: bases[:human], hp: 10)],
+        pest: [Unit.new(xy: bases[:pest], hp: 10)],
       },
       trees: trees,
       ponds: ponds,
@@ -71,7 +71,7 @@ class World
   end
 
   def not_passable
-    @ponds + @unitss[:human].map {|unit| [unit.x, unit.y]} + @unitss[:pest].map {|unit| [unit.x, unit.y]}
+    @ponds + @unitss[:human].map(&:xy) + @unitss[:pest].map(&:xy)
   end
 
   def draw
@@ -81,10 +81,6 @@ class World
         # emoji_table = {
         #   ponds: '🌊',
         #   trees: '🌲',
-        #   bases: {
-        #     human: '🏠',
-        #     pest: '🪺',
-        #   },
         #   unitss: {
         #     human: '🧍',
         #     pest: '🐛',
@@ -124,9 +120,9 @@ class World
           end
         unit =
           case [x, y]
-          when *@unitss[:human].map {|unit| [unit.x, unit.y]}
+          when *@unitss[:human].map(&:xy)
             '🧍'
-          when *@unitss[:pest].map {|unit| [unit.x, unit.y]}
+          when *@unitss[:pest].map(&:xy)
             '🐛'
           else
             '　'
@@ -141,15 +137,16 @@ class World
 end
 
 class Unit
-  def initialize(x:, y:, hp:)
-    @x = x
-    @y = y
+  def initialize(xy:, hp:)
+    @xy = xy
     @hp = hp
   end
-  attr_reader :x, :y, :hp
+  attr_reader :xy, :hp
 
   # returns [(Integer, Integer)]
   def moveable(world:)
+    (x, y) = @xy
+
     [
       [x - 1, y],
       [x + 1, y],
@@ -159,15 +156,14 @@ class Unit
       [x, y + 1],
       [x + 1, y + 1],
     ].select {|x, y|
-      [x, y] != [@x, @y] &&
+      [x, y] != @xy &&
         0 <= x && x < world.size_x && 0 <= y && y < world.size_y &&
         !world.not_passable.include?([x, y])
     }
   end
 
   def move!(xy)
-    @x = xy[0]
-    @y = xy[1]
+    @xy = xy
   end
 end
 
@@ -175,8 +171,8 @@ class Game
   def initialize(world:)
     @world = world
     @moneys = {
-      human: 0,
-      pest: 0,
+      human: 10,
+      pest: 10,
     }
     @woods = {
       human: 0,
@@ -190,7 +186,7 @@ class Game
   # returns [[Symbol, Object]]
   def player_actions(player)
     player_actions = []
-    if @moneys[player] >= 2 && !@world.unitss[player].any? {|unit| [unit.x, unit.y] == @world.bases[player] }
+    if @moneys[player] >= 2 && !@world.unitss[player].any? {|unit| @world.buildings[player][:base].include?(unit.xy) }
       player_actions << [:spawn_unit, nil]
     end
     player_actions
@@ -201,10 +197,8 @@ class Game
     in [:remove_building, [x, y]]
       raise 'Not implemented yet'
     in [:spawn_unit, nil]
-      raise 'Invalid money' if @moneys[player] < 2
-      raise 'Invalid base' if @world.unitss[player].any? {|unit| [unit.x, unit.y] == @world.bases[player]}
       @moneys[player] -= 2
-      @world.unitss[player] << Unit.new(x: @world.bases[player][0], y: @world.bases[player][1], hp: 10)
+      @world.unitss[player] << Unit.new(xy: @world.buildings[player][:base][0], hp: 10)
     end
   end
 
@@ -215,13 +209,13 @@ class Game
         [:move, xy]
       }
       harvest_woods =
-        if @world.trees.include?([unit.x, unit.y])
+        if @world.trees.include?(unit.xy)
           [[:harvest_woods, nil]]
         else
           []
         end
       farming =
-        if vacant?([unit.x, unit.y])
+        if vacant?(unit.xy)
           [[:farming, nil]]
         else
           []
@@ -241,9 +235,9 @@ class Game
       unit.move!(xy)
     in [:harvest_woods, nil]
       @woods[player] += 3
-      @world.trees.delete([unit.x, unit.y])
+      @world.trees.delete(unit.xy)
     in [:farming, nil]
-      @world.buildings[player][:seeds0] << [unit.x, unit.y]
+      @world.buildings[player][:seeds0] << unit.xy
     end
   end
 
