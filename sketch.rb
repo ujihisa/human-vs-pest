@@ -1,20 +1,31 @@
 # frozen_string_literal: true
 
+module Human
+  def self.opponent
+    Pest
+  end
+end
+
+module Pest
+  def self.opponent
+    Human
+  end
+end
+
 class World
   # size_x Integer
   # size_y Integer
-  # unitss {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
-  # trees [(Integer, Integer)]
-  # ponds [(Integer, Integer)]
-  def initialize(size_x:, size_y:, unitss:, trees:, ponds:, buildings:)
+  # unitss {Human => [(Integer, Integer)], Pest => [(Integer, Integer)]}
+  # environments {trees: [(Integer, Integer)], ponds: [(Integer, Integer)]}
+  # buildings {Human => {base: [(Integer, Integer)], ...}, ...}
+  def initialize(size_x:, size_y:, unitss:, environments:, buildings:)
     @size_x = size_x
     @size_y = size_y
     @unitss = unitss
-    @trees = trees
-    @ponds = ponds
+    @environments = environments
     @buildings = buildings
   end
-  attr_reader :size_x, :size_y, :unitss, :trees, :ponds, :buildings
+  attr_reader :size_x, :size_y, :unitss, :environments, :buildings
 
   def self.create(size_x:, size_y:)
     bases = {
@@ -41,14 +52,14 @@ class World
     }
 
     buildings = {
-      human: {
+      Human => {
         base: [bases[:human]],
         fruits: [],
         flowers: [],
         seeds: [],
         seeds0: [],
       },
-      pest: {
+      Pest => {
         base: [bases[:pest]],
         fruits: [],
         flowers: [],
@@ -61,40 +72,54 @@ class World
       size_x: size_x,
       size_y: size_y,
       unitss: {
-        human: [Unit.new(xy: bases[:human], hp: 10)],
-        pest: [Unit.new(xy: bases[:pest], hp: 10)],
+        Human => [Unit.new(xy: bases[:human], hp: 10)],
+        Pest => [Unit.new(xy: bases[:pest], hp: 10)],
       },
-      trees: trees,
-      ponds: ponds,
+      environments: {
+        trees: trees,
+        ponds: ponds,
+      },
       buildings: buildings,
     )
   end
 
+  def neighbours(xy0)
+    [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+    ].map {|x, y|
+      [xy0[0] + x, xy0[1] + y]
+    }.select {|x, y|
+      0 <= x && x < @size_x && 0 <= y && y < @size_y
+    }
+  end
+
   def not_passable
-    @ponds + @unitss[:human].map(&:xy) + @unitss[:pest].map(&:xy)
+    @environments[:ponds] + @unitss[Human].map(&:xy) + @unitss[Pest].map(&:xy)
   end
 
   def draw
     @size_y.times do |y|
       print '|'
       @size_x.times do |x|
-        # emoji_table = {
-        #   ponds: '🌊',
-        #   trees: '🌲',
-        #   unitss: {
-        #     human: '🧍',
-        #     pest: '🐛',
-        #   },
-        # }
+        environment_table = {
+          ponds: '🌊',
+          trees: '🌲',
+        }
         building_table = {
-          human: {
+          Human => {
             base: '🏠',
             fruits: '🍓',
             flowers: '🌷',
             seeds: '🌱',
             seeds0: '🌱',
           },
-          pest: {
+          Pest => {
             base: '🪺',
             fruits: '🍄',
             flowers: '🦠',
@@ -102,32 +127,35 @@ class World
             seeds0: '🧬',
           }
         }
-        building =
-          case [x, y]
-          when *@ponds
-            '🌊'
-          when *@trees
-            '🌲'
-          else
-            q = @buildings.filter_map {|p, bs|
-              bs.filter_map {|b, xys|
-                if xys.include?([x, y])
-                  building_table[p][b]
-                end
-              }.first
+        unit_table = {
+          Human => '🧍',
+          Pest => '🐛',
+        },
+        background =
+          @environments.filter_map {|type, xys|
+            if xys.include?([x, y])
+              environment_table[type]
+            end
+          }.first
+        background ||=
+          @buildings.filter_map {|p, bs|
+            bs.filter_map {|b, xys|
+              if xys.include?([x, y])
+                building_table[p][b]
+              end
             }.first
-            q ? q : '　'
-          end
+          }.first
+        background ||= '　'
         unit =
           case [x, y]
-          when *@unitss[:human].map(&:xy)
+          when *@unitss[Human].map(&:xy)
             '🧍'
-          when *@unitss[:pest].map(&:xy)
+          when *@unitss[Pest].map(&:xy)
             '🐛'
           else
             '　'
           end
-        print "#{building}#{unit}|"
+        print "#{background}#{unit}|"
       end
       puts
       puts('.' * (@size_x * 5 + 1))
@@ -141,29 +169,22 @@ class Unit
     @xy = xy
     @hp = hp
   end
-  attr_reader :xy, :hp
+  attr_reader :xy
+  attr_accessor :hp
 
   # returns [(Integer, Integer)]
   def moveable(world:)
-    (x, y) = @xy
-
-    [
-      [x - 1, y],
-      [x + 1, y],
-      [x, y - 1],
-      [x, y + 1],
-      [x - 1, y + 1],
-      [x, y + 1],
-      [x + 1, y + 1],
-    ].select {|x, y|
-      [x, y] != @xy &&
-        0 <= x && x < world.size_x && 0 <= y && y < world.size_y &&
-        !world.not_passable.include?([x, y])
+    world.neighbours(@xy).select {|x, y|
+      !world.not_passable.include?([x, y])
     }
   end
 
   def move!(xy)
     @xy = xy
+  end
+
+  def dead?
+    hp <= 0
   end
 end
 
@@ -171,12 +192,12 @@ class Game
   def initialize(world:)
     @world = world
     @moneys = {
-      human: 0,
-      pest: 0,
+      Human => 0,
+      Pest => 0,
     }
     @woods = {
-      human: 0,
-      pest: 0,
+      Human => 0,
+      Pest => 0,
     }
 
     @turn = 0
@@ -191,6 +212,7 @@ class Game
     if @moneys[player] >= cost && !@world.unitss[player].any? {|unit| @world.buildings[player][:base].include?(unit.xy) }
       player_actions << [:spawn_unit, nil]
     end
+
     player_actions
   end
 
@@ -209,34 +231,48 @@ class Game
   # returns [[Symbol, Object]]
   def unit_actions(player)
     @world.unitss[player].to_h {|unit|
-      moves = unit.moveable(world: @world).map {|xy|
-        [:move, xy]
+      actions = []
+
+      moves = unit.moveable(world: @world).each {|xy|
+        actions << [:move, xy]
       }
-      harvest_woods =
-        if @world.trees.include?(unit.xy)
-          [[:harvest_woods, nil]]
-        else
-          []
+
+      if @world.environments[:trees].include?(unit.xy)
+        actions << [:harvest_woods, nil]
+      end
+
+      if vacant?(unit.xy)
+        actions << [:farming, nil]
+      end
+
+      if @world.buildings[player][:fruits].include?(unit.xy)
+        actions << [:harvest_fruit, nil]
+      end
+
+      neighbours = @world.neighbours(unit.xy)
+      melee_attack =
+        if 2 < unit.hp
+          @world.unitss[player.opponent].flat_map {|unit|
+            if neighbours.include?(unit.xy)
+              actions << [:melee_attack, unit]
+            end
+          }
         end
-      farming =
-        if vacant?(unit.xy)
-          [[:farming, nil]]
-        else
-          []
+
+      @world.buildings[player.opponent].each do |b, xys|
+        if xys.include?(unit.xy)
+          actions << [:destroy, nil]
         end
-      harvest_fruit =
-        if @world.buildings[player][:fruits].include?(unit.xy)
-          [[:harvest_fruit, nil]]
-        else
-          []
-        end
-      [unit, moves + harvest_woods + farming + harvest_fruit]
+      end
+
+      [unit, actions]
     }
   end
 
   private def vacant?(xy)
     buildings = @world.buildings.values.flat_map { _1.values.flatten(1) }
-    !(@world.trees + @world.ponds + buildings).include?(xy)
+    environments = @world.environments.values
+    !(environments + buildings).include?(xy)
   end
 
   def unit_action!(player, unit, action)
@@ -245,12 +281,38 @@ class Game
       unit.move!(xy)
     in [:harvest_woods, nil]
       @woods[player] += 3
-      @world.trees.delete(unit.xy)
+      @world.environments[:trees].delete(unit.xy)
     in [:farming, nil]
       @world.buildings[player][:seeds0] << unit.xy
     in [:harvest_fruit, nil]
       @world.buildings[player][:fruits].delete(unit.xy)
       @moneys[player] += 3
+    in [:melee_attack, target_unit]
+      # p 'Melee attack!'
+      target_unit.hp -= 5
+
+      if target_unit.dead?
+        # p 'Killed!'
+        @world.unitss[player.opponent].delete(target_unit)
+      end
+
+      unit.hp -= 2
+    in [:destroy, nil]
+      @world.buildings[player.opponent].each do |b, xys|
+        xys.each do |xy|
+          # there should be exactly one
+          if xy == unit.xy
+            xys.delete(xy)
+
+            case b
+            when :base
+              self.draw
+              p "#{player}'s victory!"
+              exit
+            end
+          end
+        end
+      end
     end
   end
 
@@ -274,25 +336,42 @@ end
 game = Game.new(world: World.create(size_x: 5, size_y: 8))
 game.draw
 
-50.times do
-  pa = game.player_actions(:human).sample
-  game.player_action!(:human, pa) if pa
-
-  pa = game.player_actions(:pest).sample
-  game.player_action!(:pest, pa) if pa
-
-  uas_by_unit = game.unit_actions(:human)
-  uas_by_unit.each do |u, uas|
-    ua = uas.find { _1[0] != :move }
-    ua ||= uas.sample
-    game.unit_action!(:human, u, ua) if ua
+module AI
+  def self.unit_action_for(game, player, u, uas)
+    ua = uas.find { [:destroy, :melee_attack].include?(_1[0]) }
+    ua ||=
+      if game.world.unitss[player].size < 2
+        uas.sample
+      else
+        uas.select {|a, _| a == :move }.min_by {|_, xy|
+          distance(xy, game.world.buildings[player.opponent][:base][0])
+        }
+      end
+    ua
   end
 
-  uas_by_unit = game.unit_actions(:pest)
+  private_class_method def self.distance(xy0, xy1)
+    Math.sqrt((xy1[0] - xy0[0]) ** 2 + (xy1[1] - xy0[1]) ** 2)
+  end
+end
+
+50.times do
+  pa = game.player_actions(Human).sample
+  game.player_action!(Human, pa) if pa
+
+  pa = game.player_actions(Pest).sample
+  game.player_action!(Pest, pa) if pa
+
+  uas_by_unit = game.unit_actions(Human)
   uas_by_unit.each do |u, uas|
-    ua = uas.find { _1[0] != :move }
-    ua ||= uas.sample
-    game.unit_action!(:pest, u, ua) if ua
+    ua = AI.unit_action_for(game, Human, u, uas)
+    game.unit_action!(Human, u, ua) if ua
+  end
+
+  uas_by_unit = game.unit_actions(Pest)
+  uas_by_unit.each do |u, uas|
+    ua = AI.unit_action_for(game, Pest, u, uas)
+    game.unit_action!(Pest, u, ua) if ua
   end
 
   game.tick!
