@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hexagonal Grid</title>
+  <link rel="stylesheet" href="styles.css">
+<style>
+  * {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #f0f0f0;
+}
+
+.hex-grid {
+  display: flex;
+  flex-wrap: wrap;
+  width: 400px; /* Adjust as needed */
+}
+
+.hex {
+  position: relative;
+  width: calc(100%/3.5); /* Adjust as needed */
+  padding-bottom: calc(100%/3.5/1.732); /* 1.732 is the square root of 3 */
+  margin: calc(100%/3.5/6) 0;
+  list-style-type: none;
+}
+
+.hex:nth-child(odd) {
+  margin-left: calc(100%/7);
+}
+
+.hex-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  clip-path: polygon(25% 6.69873%, 75% 6.69873%, 100% 50%,
+                    75% 93.3013%, 25% 93.3013%, 0% 50%);
+  background-color: #79a3b1;
+}
+
+.hex-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  color: white;
+  font-size: 1rem;
+}
+</style>
+</head>
+<body>
+  <div class="hex-grid">
+    <div class="hex">
+      <div class="hex-inner">
+        <div class="hex-content">1</div>
+      </div>
+    </div>
+    <div class="hex">
+      <div class="hex-inner">
+        <div class="hex-content">2</div>
+      </div>
+    </div>
+    <div class="hex">
+      <div class="hex-inner">
+        <div class="hex-content">3</div>
+      </div>
+    </div>
+    <div class="hex">
+      <div class="hex-inner">
+        <div class="hex-content">4</div>
+      </div>
+    </div>
+    <!-- Add more hex cells as needed -->
+  </div>
+</body>
+</html>
