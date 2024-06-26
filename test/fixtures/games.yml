@@ -1,9 +1,7 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  public_id: MyString
-  finished_at: 2024-06-25 21:28:01
+  finished_at: 2024-06-25 21:38:43
 
 two:
-  public_id: MyString
-  finished_at: 2024-06-25 21:28:01
+  finished_at: 2024-06-25 21:38:43

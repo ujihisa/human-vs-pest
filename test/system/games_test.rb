@@ -15,7 +15,6 @@ class GamesTest < ApplicationSystemTestCase
     click_on "New game"
 
     fill_in "Finished at", with: @game.finished_at
-    fill_in "Public", with: @game.public_id
     click_on "Create Game"
 
     assert_text "Game was successfully created"
@@ -27,7 +26,6 @@ class GamesTest < ApplicationSystemTestCase
     click_on "Edit this game", match: :first
 
     fill_in "Finished at", with: @game.finished_at
-    fill_in "Public", with: @game.public_id
     click_on "Update Game"
 
     assert_text "Game was successfully updated"
