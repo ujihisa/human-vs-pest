@@ -15,10 +15,6 @@ class GamesController < ApplicationController
     @game = Game.new
   end
 
-  # GET /games/1/edit
-  def edit
-  end
-
   # POST /games or /games.json
   def create
     @game = Game.new(game_params)
