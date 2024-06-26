@@ -105,7 +105,6 @@ class World
           [0, -1],
 
           [-1, 0],
-          [0, 0],
           [1, 0],
 
           [-1, 1], # これ
@@ -119,7 +118,6 @@ class World
           [1, -1], # これ
 
           [-1, 0],
-          [0, 0],
           [1, 0],
 
           [0, 1],
@@ -215,7 +213,8 @@ class Unit
   # returns [(Integer, Integer)]
   def moveable(world:)
     world.neighbours(@xy).select {|x, y|
-      !world.not_passable?([x, y])
+      !world.not_passable?([x, y]) &&
+        !world.unitss.values.flatten(1).any? { _1.xy == [x, y] }
     }
   end
 
@@ -269,44 +268,47 @@ class Game
   end
 
   # returns [[Symbol, Object]]
-  def unit_actions(player)
-    @world.unitss[player].to_h {|unit|
-      actions = []
+  def unit_actions(player, unit)
+    actions = []
 
-      moves = unit.moveable(world: @world).each {|xy|
-        actions << [:move, xy]
-      }
-
-      if @world.hex_at(unit.xy) == :tree
-        actions << [:harvest_woods, nil]
-      end
-
-      if vacant?(unit.xy)
-        actions << [:farming, nil]
-      end
-
-      if @world.buildings[player][:fruits].include?(unit.xy)
-        actions << [:harvest_fruit, nil]
-      end
-
-      neighbours = @world.neighbours(unit.xy)
-      melee_attack =
-        if 2 < unit.hp
-          @world.unitss[player.opponent].flat_map {|unit|
-            if neighbours.include?(unit.xy)
-              actions << [:melee_attack, unit]
-            end
-          }
-        end
-
-      @world.buildings[player.opponent].each do |b, xys|
-        if xys.include?(unit.xy)
-          actions << [:destroy, nil]
-        end
-      end
-
-      [unit, actions]
+    moves = unit.moveable(world: @world).each {|xy|
+      actions << [:move, xy]
     }
+
+    if unit.hp < 8
+      actions << [:selfcare, nil]
+    end
+
+
+    if @world.hex_at(unit.xy) == :tree
+      actions << [:harvest_woods, nil]
+    end
+
+    if vacant?(unit.xy)
+      actions << [:farming, nil]
+    end
+
+    if @world.buildings[player][:fruits].include?(unit.xy)
+      actions << [:harvest_fruit, nil]
+    end
+
+    neighbours = @world.neighbours(unit.xy)
+    melee_attack =
+      if 2 < unit.hp
+        @world.unitss[player.opponent].flat_map {|unit|
+          if neighbours.include?(unit.xy)
+            actions << [:melee_attack, unit]
+          end
+        }
+      end
+
+    @world.buildings[player.opponent].each do |b, xys|
+      if xys.include?(unit.xy)
+        actions << [:destroy, nil]
+      end
+    end
+
+    actions
   end
 
   private def vacant?(xy)
@@ -322,6 +324,8 @@ class Game
     case action
     in [:move, xy]
       unit.move!(xy)
+    in [:selfcare, nil]
+      unit.hp = [unit.hp + 3, 8].min
     in [:harvest_woods, nil]
       @woods[player] += 3
       @world.environments[:trees].delete(unit.xy)
@@ -371,7 +375,7 @@ class Game
       turn: @turn,
       moneys: @moneys,
       woods: @woods,
-      num_units: @world.unitss.transform_values(&:size),
+      # num_units: @world.unitss.transform_values(&:size),
     )
     @world.draw
   end
@@ -386,7 +390,7 @@ module AI
     ua = uas.find { [:destroy, :melee_attack].include?(_1[0]) }
     return ua if ua
 
-    if game.world.unitss[player].size < 2
+    if game.world.unitss[player].size < 3
       # 成長を狙うタイミング
       ua = uas.select {|a, _| a != :move }.sample
       ua ||= uas.sample
@@ -405,22 +409,24 @@ module AI
   end
 end
 
-50.times do
+80.times do
   pa = game.player_actions(Human).sample
   game.player_action!(Human, pa) if pa
 
   pa = game.player_actions(Pest).sample
   game.player_action!(Pest, pa) if pa
 
-  uas_by_unit = game.unit_actions(Human)
-  uas_by_unit.each do |u, uas|
+  game.world.unitss[Human].each do |u|
+    uas = game.unit_actions(Human, u)
     ua = AI.unit_action_for(game, Human, u, uas)
+    p ua
     game.unit_action!(Human, u, ua) if ua
   end
 
-  uas_by_unit = game.unit_actions(Pest)
-  uas_by_unit.each do |u, uas|
+  game.world.unitss[Pest].each do |u|
+    uas = game.unit_actions(Pest, u)
     ua = AI.unit_action_for(game, Pest, u, uas)
+    p ua
     game.unit_action!(Pest, u, ua) if ua
   end
 
