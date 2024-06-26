@@ -97,10 +97,11 @@ class World
     @hexes[xy[0]][xy[1]]
   end
 
-  def neighbours(xy0)
+  def neighbours(xy)
+    (x, y) = xy
     # hexなので現在位置に応じて非対称
     diffs =
-      if xy0[1].odd?
+      if y.odd?
         [
           [0, -1],
 
@@ -124,10 +125,10 @@ class World
         ]
       end
 
-    diffs.map {|x, y|
-      [xy0[0] + x, xy0[1] + y]
-    }.select {|x, y|
-      0 <= x && x < @size_x && 0 <= y && y < @size_y
+    diffs.map {|dx, dy|
+      [x + dx, y + dy]
+    }.select {|nx, ny|
+      (0...@size_x).cover?(nx) && (0...@size_y).cover?(ny)
     }
   end
 
@@ -276,7 +277,7 @@ class Game
     }
 
     if unit.hp < 8
-      actions << [:selfcare, nil]
+      actions << [:idle, nil]
     end
 
 
@@ -295,9 +296,9 @@ class Game
     neighbours = @world.neighbours(unit.xy)
     melee_attack =
       if 2 < unit.hp
-        @world.unitss[player.opponent].flat_map {|unit|
-          if neighbours.include?(unit.xy)
-            actions << [:melee_attack, unit]
+        @world.unitss[player.opponent].flat_map {|ounit|
+          if neighbours.include?(ounit.xy)
+            actions << [:melee_attack, ounit]
           end
         }
       end
@@ -324,7 +325,7 @@ class Game
     case action
     in [:move, xy]
       unit.move!(xy)
-    in [:selfcare, nil]
+    in [:idle, nil]
       unit.hp = [unit.hp + 3, 8].min
     in [:harvest_woods, nil]
       @woods[player] += 3
