@@ -4,9 +4,11 @@
     <%= game.player_name %>
   </p>
 
-  <p>
+  <%- if game.finished_at %>
+    <p>
     <strong>Finished at:</strong>
     <%= game.finished_at %>
-  </p>
+    </p>
+  <%- end %>
 
 </div>

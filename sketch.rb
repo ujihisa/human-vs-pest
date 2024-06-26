@@ -51,8 +51,8 @@ class World
       } or raise 'Could not find a suitable pond location'
     }
 
-    hexes = Array.new(size_x) {|x|
-      Array.new(size_y) {|y|
+    hexes = Array.new(size_y) {|y|
+      Array.new(size_x) {|x|
         case [x, y]
         when *trees
           :tree
@@ -185,6 +185,7 @@ class World
         end
       print "#{background}#{unit}"
     }
+    # main = -> (x, y) { print "#{x}, #{y}" }
 
     (0...@size_y).each do |y|
       print '|'
