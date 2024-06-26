@@ -13,19 +13,19 @@ module Pest
 end
 
 class World
+  # hexes [[Symbol]]
   # size_x Integer
   # size_y Integer
   # unitss {Human => [(Integer, Integer)], Pest => [(Integer, Integer)]}
-  # environments {trees: [(Integer, Integer)], ponds: [(Integer, Integer)]}
   # buildings {Human => {base: [(Integer, Integer)], ...}, ...}
-  def initialize(size_x:, size_y:, unitss:, environments:, buildings:)
+  def initialize(hexes:, size_x:, size_y:, unitss:, buildings:)
+    @hexes = hexes
     @size_x = size_x
     @size_y = size_y
     @unitss = unitss
-    @environments = environments
     @buildings = buildings
   end
-  attr_reader :size_x, :size_y, :unitss, :environments, :buildings
+  attr_reader :hexes, :size_x, :size_y, :unitss, :buildings
 
   def self.create(size_x:, size_y:)
     bases = {
@@ -51,6 +51,19 @@ class World
       } or raise 'Could not find a suitable pond location'
     }
 
+    hexes = Array.new(size_x) {|x|
+      Array.new(size_y) {|y|
+        case [x, y]
+        when *trees
+          :tree
+        when *ponds
+          :pond
+        else
+          nil
+        end
+      }
+    }
+
     buildings = {
       Human => {
         base: [bases[:human]],
@@ -69,98 +82,125 @@ class World
     }
 
     new(
+      hexes: hexes,
       size_x: size_x,
       size_y: size_y,
       unitss: {
-        Human => [Unit.new(xy: bases[:human], hp: 10)],
-        Pest => [Unit.new(xy: bases[:pest], hp: 10)],
-      },
-      environments: {
-        trees: trees,
-        ponds: ponds,
+        Human => [Unit.new(xy: bases[:human], hp: 8)],
+        Pest => [Unit.new(xy: bases[:pest], hp: 8)],
       },
       buildings: buildings,
     )
   end
 
+  def hex_at(xy)
+    @hexes[xy[0]][xy[1]]
+  end
+
   def neighbours(xy0)
-    [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-      [-1, 1],
-      [0, 1],
-      [1, 1],
-    ].map {|x, y|
+    # hexなので現在位置に応じて非対称
+    diffs =
+      if xy0[1].odd?
+        [
+          [0, -1],
+
+          [-1, 0],
+          [0, 0],
+          [1, 0],
+
+          [-1, 1], # これ
+          [0, 1],
+          [1, 1], # これ
+        ]
+      else
+        [
+          [-1, -1], # これ
+          [0, -1],
+          [1, -1], # これ
+
+          [-1, 0],
+          [0, 0],
+          [1, 0],
+
+          [0, 1],
+        ]
+      end
+
+    diffs.map {|x, y|
       [xy0[0] + x, xy0[1] + y]
     }.select {|x, y|
       0 <= x && x < @size_x && 0 <= y && y < @size_y
     }
   end
 
-  def not_passable
-    @environments[:ponds] + @unitss[Human].map(&:xy) + @unitss[Pest].map(&:xy)
+  def not_passable?(xy)
+    (x, y) = xy
+    !!@hexes[x][y] ||
+      (@unitss[Human].map(&:xy) == xy) ||
+      (@unitss[Pest].map(&:xy) == xy)
   end
 
   def draw
-    @size_y.times do |y|
-      print '|'
-      @size_x.times do |x|
-        environment_table = {
-          ponds: '🌊',
-          trees: '🌲',
-        }
-        building_table = {
-          Human => {
-            base: '🏠',
-            fruits: '🍓',
-            flowers: '🌷',
-            seeds: '🌱',
-            seeds0: '🌱',
-          },
-          Pest => {
-            base: '🪺',
-            fruits: '🍄',
-            flowers: '🦠',
-            seeds: '🧬',
-            seeds0: '🧬',
-          }
-        }
-        unit_table = {
-          Human => '🧍',
-          Pest => '🐛',
+    main = -> (x, y) {
+      environment_table = {
+        pond: '🌊',
+        tree: '🌲',
+      }
+      building_table = {
+        Human => {
+          base: '🏠',
+          fruits: '🍓',
+          flowers: '🌷',
+          seeds: '🌱',
+          seeds0: '🌱',
         },
-        background =
-          @environments.filter_map {|type, xys|
+        Pest => {
+          base: '🪺',
+          fruits: '🍄',
+          flowers: '🦠',
+          seeds: '🧬',
+          seeds0: '🧬',
+        }
+      }
+      background = environment_table[@hexes[x][y]]
+      background ||=
+        @buildings.filter_map {|p, bs|
+          bs.filter_map {|b, xys|
             if xys.include?([x, y])
-              environment_table[type]
+              building_table[p][b]
             end
           }.first
-        background ||=
-          @buildings.filter_map {|p, bs|
-            bs.filter_map {|b, xys|
-              if xys.include?([x, y])
-                building_table[p][b]
-              end
-            }.first
-          }.first
-        background ||= '　'
-        unit =
-          case [x, y]
-          when *@unitss[Human].map(&:xy)
-            '🧍'
-          when *@unitss[Pest].map(&:xy)
-            '🐛'
-          else
-            '　'
-          end
-        print "#{background}#{unit}|"
+        }.first
+      background ||= '　'
+
+      human = @unitss[Human].find { _1.xy == [x, y] }
+      pest = @unitss[Pest].find { _1.xy == [x, y] }
+      unit =
+        if human
+          "🧍#{human.hp}"
+        elsif pest
+          raise "duplicated unit location: #{x}, #{y}" if human
+          "🐛#{pest.hp}"
+        else
+          '　 '
+        end
+      print "#{background}#{unit}"
+    }
+
+    (0...@size_y).each do |y|
+      print '|'
+      (0.step(@size_x - 1, 2)).each do |x|
+        print '|.....|' if x > 0
+        main.(x, y)
       end
-      puts
-      puts('.' * (@size_x * 5 + 1))
+      puts '|'
+      (1.step(@size_x - 1, 2)).each do |x|
+        print '|.....|'
+        main.(x, y)
+      end
+      puts '|.....|'
     end
-    puts('=' * (@size_x * 5 + 1))
+    puts('=' * (@size_x * 6 + 1))
   end
 end
 
@@ -175,7 +215,7 @@ class Unit
   # returns [(Integer, Integer)]
   def moveable(world:)
     world.neighbours(@xy).select {|x, y|
-      !world.not_passable.include?([x, y])
+      !world.not_passable?([x, y])
     }
   end
 
@@ -224,7 +264,7 @@ class Game
       cost = @world.unitss[player].size ** 2
 
       @moneys[player] -= cost
-      @world.unitss[player] << Unit.new(xy: @world.buildings[player][:base][0], hp: 10)
+      @world.unitss[player] << Unit.new(xy: @world.buildings[player][:base][0], hp: 8)
     end
   end
 
@@ -237,7 +277,7 @@ class Game
         actions << [:move, xy]
       }
 
-      if @world.environments[:trees].include?(unit.xy)
+      if @world.hex_at(unit.xy) == :tree
         actions << [:harvest_woods, nil]
       end
 
@@ -270,9 +310,12 @@ class Game
   end
 
   private def vacant?(xy)
+    if @world.hex_at(xy)
+      return false
+    end
+
     buildings = @world.buildings.values.flat_map { _1.values.flatten(1) }
-    environments = @world.environments.values
-    !(environments + buildings).include?(xy)
+    !buildings.include?(xy)
   end
 
   def unit_action!(player, unit, action)
@@ -289,7 +332,7 @@ class Game
       @moneys[player] += 3
     in [:melee_attack, target_unit]
       # p 'Melee attack!'
-      target_unit.hp -= 5
+      target_unit.hp -= 4
 
       if target_unit.dead?
         # p 'Killed!'
@@ -328,6 +371,7 @@ class Game
       turn: @turn,
       moneys: @moneys,
       woods: @woods,
+      num_units: @world.unitss.transform_values(&:size),
     )
     @world.draw
   end
@@ -338,16 +382,22 @@ game.draw
 
 module AI
   def self.unit_action_for(game, player, u, uas)
+    # 破壊と近接攻撃は無条件で最優先
     ua = uas.find { [:destroy, :melee_attack].include?(_1[0]) }
-    ua ||=
-      if game.world.unitss[player].size < 2
-        uas.sample
-      else
-        uas.select {|a, _| a == :move }.min_by {|_, xy|
-          distance(xy, game.world.buildings[player.opponent][:base][0])
-        }
-      end
-    ua
+    return ua if ua
+
+    if game.world.unitss[player].size < 2
+      # 成長を狙うタイミング
+      ua = uas.select {|a, _| a != :move }.sample
+      ua ||= uas.sample
+      ua
+    else
+      # 一気に攻撃するタイミング
+      ua = uas.select {|a, _| a == :move }.min_by {|_, xy|
+        distance(xy, game.world.buildings[player.opponent][:base][0])
+      }
+      ua
+    end
   end
 
   private_class_method def self.distance(xy0, xy1)
