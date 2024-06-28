@@ -1,59 +1,8 @@
 <p style="color: green"><%= notice %></p>
 
-<%= @world_tag.to_html %>
-
 <%= render @game %>
 
-<div style="height: 640px; border: solid 1px black">
-  <div style="position: fixed; left: 0px, right: 0, bottom: 0, height: 64px; width: 64px; padding: 0px 0px;">
-    <%= image_tag "backgrounds/nil.png", style: 'height: 64px; width: 64px;' %>
-  </div>
-  <div style="position: fixed; left: 0px, right: 0, bottom: 0, height: 64px; width: 64px; padding: 32px <%= 16*3 %>px;">
-    <%= image_tag "backgrounds/nil.png", style: 'height: 64px; width: 64px;' %>
-  </div>
-  <div style="position: fixed; left: 0px, right: 0, bottom: 0, height: 64px; width: 64px; padding: 0px <%= 16*6 %>px;">
-    <%= image_tag "backgrounds/nil.png", style: 'height: 64px; width: 64px;' %>
-  </div>
-  <div style="position: fixed; left: 0px, right: 0, bottom: 0, height: 64px; width: 64px; padding: 32px <%= 16*9 %>px;">
-    <%= image_tag "backgrounds/nil.png", style: 'height: 64px; width: 64px;' %>
-  </div>
-</div>
-
-<!--
-<table width="100%" style="margin: 0 auto; border: solid 1px">
-  <tr>
-    <td>
-      <table width="100%" style="margin: 0 auto; border: solid 1px">
-        <%- (8 * 2).times do |y| %>
-          <tr>
-            <%- (5 * 2).times do |x| %>
-              <%- case [x.even?, y.even?] %>
-              <%- when [true, true] %>
-                <td style="border: solid 1px; width: 50px; height: 50px" rowspan=2>
-                  (<%= x %>, <%= y %>)
-                </td>
-              <%- when [true, false] %>
-              <%- when [false, true] %>
-              <%- when [false, false] %>
-                <td style="border: solid 1px; width: 50px; height: 50px" rowspan=2>
-                  (<%= x %>, <%= y %>)
-                </td>
-              <%- end %>
-
-            <%- end %>
-          </tr>
-        <%- end %>
-      </table>
-    </td>
-    <td>
-      <h2>Human</h2>
-      bbb
-      <h2>Pest</h2>
-      ccc
-    </td>
-  </tr>
-</table>
--->
+<%= @world_tag.to_html %>
 
 <div>
   <%= link_to "Back to games", games_path %>
