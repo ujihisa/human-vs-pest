@@ -3,6 +3,8 @@
 require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
+  @@world = Sketch::World.create(size_x: 5, size_y: 8)
+  @@human_xy = [2, 0]
   def initialize(...)
     super(...)
   end
@@ -20,17 +22,19 @@ class WorldTag < Live::View
 
   def render(builder)
     # builder.tag('div', onclick: forward_event) do
-    builder.append(ERB.new(<<~'EOF').result)
-      <div style="height: 640px; border: solid 1px black" onclick="live.forward('world', {type: 'click', clientX: event.clientX, clientY: event.clientY});">
-        <%- 8.times do |y| %>
-          <%- 5.times do |x| %>
+    world = @@world
+    human_xy = @@human_xy
+    builder.append(ERB.new(<<~'EOF').result(binding()))
+      <div style="height: 640px; border: solid 1px black">
+        <% world.hexes.each_with_index do |hexes_y, y| %>
+          <% hexes_y.each_with_index do |background, x| %>
+            <% background = 'nil' if background.nil? %>
             <% padding_top = x.even? ? 64*y : 64*y + 32 %>
             <% padding_right = 48*x %>
-            <% background = [*['nil']*10, 'tree', 'tree', 'pond'].sample %>
-            <div style="position: absolute; left: 0px, right: 0, bottom: 0, height: 64px; width: 64px; padding: <%= padding_top %>px <%= padding_right %>px;">
+            <div style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_right %>px 0px;" onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});">
               <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
               <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 32px;">
-                <%= '🧍' if [x, y] == [3, 2] %>
+                <%= '🧍' if [x, y] == human_xy %>
                 <%= '🐛' if [x, y] == [2, 7] %>
               </div>
             </div>
@@ -44,6 +48,7 @@ class WorldTag < Live::View
     pp event
     case event[:type]
     when 'click'
+      @@human_xy = [event[:x], event[:y]]
       update!
     end
   end

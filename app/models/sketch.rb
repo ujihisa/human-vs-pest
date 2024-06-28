@@ -384,9 +384,6 @@ module Sketch
     end
   end
 
-  game = Game.new(world: World.create(size_x: 5, size_y: 8))
-  game.draw
-
   module AI
     def self.unit_action_for(game, player, u, uas)
       # 破壊と近接攻撃は無条件で最優先
@@ -413,6 +410,10 @@ module Sketch
   end
 
   if __FILE__ == $0
+    game = Game.new(world: World.create(size_x: 5, size_y: 8))
+    game.draw
+
+
     80.times do
       pa = game.player_actions(Human).sample
       game.player_action!(Human, pa) if pa
