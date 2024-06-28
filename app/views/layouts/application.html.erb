@@ -8,7 +8,7 @@
 
     <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
-    <%= javascript_import_module_tag "live" %>
+    <%= javascript_import_module_tag 'live' if @world_tag %>
   </head>
 
   <body>
