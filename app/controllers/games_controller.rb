@@ -1,3 +1,39 @@
+# frozen_string_literal: true
+
+require 'async/websocket/adapters/rails'
+
+class WorldTag < Live::View
+  def initialize(...)
+    super(...)
+  end
+
+  def bind(page)
+    super # @page = page
+
+    Async do
+      while @page
+        update!
+        sleep 1
+      end
+    end
+  end
+
+  def render(builder)
+    # builder.tag('div', onclick: forward_event) do
+      builder.append(<<~"EOF")
+        #{rand}
+      EOF
+  end
+
+  def handle(event)
+    pp event
+    case event[:type]
+    when 'click'
+      update!
+    end
+  end
+end
+
 class GamesController < ApplicationController
   before_action :set_game, only: %i[ show ]
 
@@ -8,6 +44,16 @@ class GamesController < ApplicationController
 
   # GET /games/1 or /games/1.json
   def show
+    @world_tag = WorldTag.new('world')
+  end
+
+  skip_before_action :verify_authenticity_token, only: :live
+
+  RESOLVER = Live::Resolver.allow(WorldTag)
+  def live
+    self.response = Async::WebSocket::Adapters::Rails.open(request) do |connection|
+      Live::Page.new(RESOLVER).run(connection)
+    end
   end
 
   # GET /games/new
