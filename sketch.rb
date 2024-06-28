@@ -411,27 +411,29 @@ module AI
   end
 end
 
-80.times do
-  pa = game.player_actions(Human).sample
-  game.player_action!(Human, pa) if pa
+if __FILE__ == $0
+  80.times do
+    pa = game.player_actions(Human).sample
+    game.player_action!(Human, pa) if pa
 
-  pa = game.player_actions(Pest).sample
-  game.player_action!(Pest, pa) if pa
+    pa = game.player_actions(Pest).sample
+    game.player_action!(Pest, pa) if pa
 
-  game.world.unitss[Human].each do |u|
-    uas = game.unit_actions(Human, u)
-    ua = AI.unit_action_for(game, Human, u, uas)
-    p ua
-    game.unit_action!(Human, u, ua) if ua
+    game.world.unitss[Human].each do |u|
+      uas = game.unit_actions(Human, u)
+      ua = AI.unit_action_for(game, Human, u, uas)
+      p ua
+      game.unit_action!(Human, u, ua) if ua
+    end
+
+    game.world.unitss[Pest].each do |u|
+      uas = game.unit_actions(Pest, u)
+      ua = AI.unit_action_for(game, Pest, u, uas)
+      p ua
+      game.unit_action!(Pest, u, ua) if ua
+    end
+
+    game.tick!
+    game.draw
   end
-
-  game.world.unitss[Pest].each do |u|
-    uas = game.unit_actions(Pest, u)
-    ua = AI.unit_action_for(game, Pest, u, uas)
-    p ua
-    game.unit_action!(Pest, u, ua) if ua
-  end
-
-  game.tick!
-  game.draw
 end
