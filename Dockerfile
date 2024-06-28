@@ -30,6 +30,9 @@ RUN bundle install && \
 # Copy application code
 COPY . .
 
+# TODO: Temporary
+COPY temporary-fixed-database.sqlite3 ./storage/production.sqlite3
+
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
 

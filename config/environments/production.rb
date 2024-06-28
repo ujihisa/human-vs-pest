@@ -13,7 +13,8 @@ Rails.application.configure do
   config.eager_load = true
 
   # Full error reports are disabled and caching is turned on.
-  config.consider_all_requests_local = false
+  # config.consider_all_requests_local = false
+  config.consider_all_requests_local = true # TODO: Use ^ instead.
   config.action_controller.perform_caching = true
 
   # Ensures that a master key has been made available in ENV["RAILS_MASTER_KEY"], config/master.key, or an environment
@@ -95,4 +96,6 @@ Rails.application.configure do
   config.hosts = ['human-vs-pest-t7ero6olsa-uc.a.run.app']
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+
+  config.active_record.sqlite3_production_warning = false
 end
