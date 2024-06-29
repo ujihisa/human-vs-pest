@@ -2,7 +2,7 @@
   <% world.hexes.each_with_index do |hexes_y, y| %>
     <% hexes_y.each_with_index do |background, x| %>
       <% background = 'nil' if background.nil? %>
-      <% padding_top = x.odd? ? 64*y : 64*y + 32 %>
+      <% padding_top = x.even? ? 64*y : 64*y + 32 %>
       <% padding_left = 48*x %>
       <div style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_left %>px 0px;" onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});">
         <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
@@ -28,6 +28,9 @@
           <% elsif human_focus&.moveable(world: world)&.include?([x, y]) %>
             移動
           <% else %>
+              <nobr>
+              <%= [x, y] %>
+              </nobr>
           <% end %>
         </div>
       </div>
@@ -37,5 +40,10 @@
   <div style="position: absolute; margin: 0px <%= 64 * world.size_x %>px;">
     <h2>Human</h2>
     <p>Focus: <%= human_focus.to_json %></p>
+
+    <% if human_flush %>
+      <%= human_flush %>
+    <% end %>
+
   </div>
 </div>

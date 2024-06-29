@@ -5,6 +5,7 @@ require 'async/websocket/adapters/rails'
 class WorldTag < Live::View
   @@world = Sketch::World.create(size_x: 5, size_y: 8)
   @@human_focus = nil
+  @@human_flush = nil
 
   def initialize(...)
     super(...)
@@ -26,11 +27,14 @@ class WorldTag < Live::View
       {
         world: @@world,
         human_focus: @@human_focus,
+        human_flush: @@human_flush,
       },
     ))
   end
 
   def handle(event)
+    @@human_flush = nil
+
     pp event
     case event[:type]
     when 'click'
@@ -42,6 +46,13 @@ class WorldTag < Live::View
       elsif @@human_focus&.moveable(world: @@world)&.include?([x, y])
         @@human_focus.move!([x, y])
         @@human_focus = nil
+      else
+        @@human_flush = "無効なターゲットです: #{{
+          focus: @@human_focus.to_json,
+          moveable: @@human_focus.moveable(world: @@world),
+          neighbours: @@world.neighbours(@@human_focus.xy),
+          xy: [x, y],
+        }}"
       end
       update!
     end

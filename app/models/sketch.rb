@@ -102,7 +102,7 @@ module Sketch
       (x, y) = xy
       # hexなので現在位置に応じて非対称
       diffs =
-        if y.odd?
+        if x.odd?
           [
             [0, -1],
 
@@ -135,7 +135,7 @@ module Sketch
 
     def not_passable?(xy)
       (x, y) = xy
-      !!@hexes[x][y] ||
+      @hexes[y][x] == :pond ||
         (@unitss[Human].map(&:xy) == xy) ||
         (@unitss[Pest].map(&:xy) == xy)
     end
@@ -335,7 +335,9 @@ module Sketch
         unit.hp = [unit.hp + 3, 8].min
       in [:harvest_woods, nil]
         @woods[player] += 3
-        @world.environments[:trees].delete(unit.xy)
+
+        # TODO: Dirty hack
+        @world.hexes[unit.xy[0]][unit.xy[1]] = nil
       in [:farming, nil]
         @world.buildings[player][:seeds0] << unit.xy
       in [:harvest_fruit, nil]
