@@ -259,6 +259,17 @@ module Sketch
     end
     attr_reader :world, :moneys, :woods, :turn
 
+    # only if the game is already finished
+    def winner
+      if @world.buildings[Human][:base].empty?
+        Pest
+      elsif @world.buildings[Pest][:base].empty?
+        Human
+      else
+        nil
+      end
+    end
+
     # returns [[Symbol, Object]]
     def player_actions(player)
       player_actions = []
@@ -368,13 +379,6 @@ module Sketch
             # there should be exactly one
             if xy == unit.xy
               xys.delete(xy)
-
-              case b
-              when :base
-                self.draw
-                p "#{player}'s victory!"
-                exit
-              end
             end
           end
         end
@@ -429,7 +433,7 @@ module Sketch
     game.draw
 
 
-    80.times do
+    until winner = game.winner do
       pa = game.player_actions(Human).sample
       game.player_action!(Human, pa) if pa
 
@@ -453,5 +457,6 @@ module Sketch
       game.tick!
       game.draw
     end
+    p "#{winner} won!"
   end
 end

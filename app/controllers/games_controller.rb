@@ -3,7 +3,7 @@
 require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
-  @@world = Sketch::World.create(size_x: 5, size_y: 8)
+  @@game = Sketch::Game.new(world: Sketch::World.create(size_x: 5, size_y: 8))
   @@human_focus = nil
   @@human_flush = nil
 
@@ -25,10 +25,10 @@ class WorldTag < Live::View
   def render(builder)
     builder.append(ERB.new(File.read('app/views/games/_world.html.erb')).result_with_hash(
       {
-        world: @@world,
+        world: @@game.world,
         human_focus: @@human_focus,
         human_flush: @@human_flush,
-        hexes_view: @@world.hexes_view,
+        hexes_view: @@game.world.hexes_view,
       },
     ))
   end
@@ -42,20 +42,49 @@ class WorldTag < Live::View
       (x, y) = [event[:x], event[:y]]
       if @@human_focus&.xy == [x, y]
         @@human_focus = nil
-      elsif human = @@world.unitss[Sketch::Human].find { _1.xy == [x, y] }
+      elsif human = @@game.world.unitss[Sketch::Human].find { _1.xy == [x, y] }
         @@human_focus = human
-      elsif @@human_focus&.moveable(world: @@world)&.include?([x, y])
+      elsif @@human_focus&.moveable(world: @@game.world)&.include?([x, y])
         @@human_focus.move!([x, y])
         @@human_focus = nil
       else
         @@human_flush = "無効なターゲットです: #{{
           focus: @@human_focus.to_json,
-          moveable: @@human_focus.moveable(world: @@world),
-          neighbours: @@world.neighbours(@@human_focus.xy),
+          moveable: @@human_focus.moveable(world: @@game.world),
+          neighbours: @@game.world.neighbours(@@human_focus.xy),
           xy: [x, y],
         }}"
       end
       update!
+    when 'autoplay'
+      Async do
+        50.times do
+          pa = @@game.player_actions(Sketch::Human).sample
+          @@game.player_action!(Sketch::Human, pa) if pa
+
+          @@game.world.unitss[Sketch::Human].each do |u|
+            uas = @@game.unit_actions(Sketch::Human, u)
+            ua = Sketch::AI.unit_action_for(@@game, Sketch::Human, u, uas)
+            @@game.unit_action!(Sketch::Human, u, ua) if ua
+          end
+          update!
+          sleep 0.5
+
+          pa = @@game.player_actions(Sketch::Pest).sample
+          @@game.player_action!(Sketch::Pest, pa) if pa
+
+          @@game.world.unitss[Sketch::Pest].each do |u|
+            uas = @@game.unit_actions(Sketch::Pest, u)
+            ua = Sketch::AI.unit_action_for(@@game, Sketch::Pest, u, uas)
+            @@game.unit_action!(Sketch::Pest, u, ua) if ua
+          end
+          update!
+          sleep 0.5
+
+          @@game.tick!
+          sleep 0.5
+        end
+      end
     end
   end
 end

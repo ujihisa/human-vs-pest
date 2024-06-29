@@ -9,6 +9,11 @@
           onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});">
         <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+            <nobr>
+              <%= hexes_view[y][x] %>
+            </nobr>
+          </div>
           <% if [x, y] == human_focus&.xy %>
             <font style="font-size: 32px;">
               [🧍]
@@ -26,7 +31,6 @@
           <% elsif human_focus&.moveable(world: world)&.include?([x, y]) %>
             移動
           <% else %>
-            <%= hexes_view[y][x] %>
             <!--
               <nobr>
               <%= [x, y] %>
@@ -46,5 +50,8 @@
       <%= human_flush %>
     <% end %>
 
+    <h2>Debug</h2>
+    <input type="submit" value="Autoplay"
+           onclick="live.forward('world', {type: 'autoplay', clientX: event.clientX, clientY: event.clientY});">
   </div>
 </div>
