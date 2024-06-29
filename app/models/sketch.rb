@@ -65,6 +65,33 @@ module Sketch
         }
       }
 
+      buildings = {
+        Human => {
+          base: [bases[:human]],
+          fruits: [],
+          flowers: [],
+          seeds: [],
+          seeds0: [],
+        },
+        Pest => {
+          base: [bases[:pest]],
+          fruits: [],
+          flowers: [],
+          seeds: [],
+          seeds0: [],
+        },
+      }
+      # Returns (Player, Building)
+      def buildings.at(xy)
+        self.filter_map {|p, bs|
+          bs.filter_map {|b, xys|
+            if xys.include?(xy)
+              [p, b]
+            end
+          }.first
+        }.first
+      end
+
       new(
         hexes: hexes,
         size_x: size_x,
@@ -73,22 +100,7 @@ module Sketch
           Human => [Unit.new(xy: bases[:human], hp: 8)],
           Pest => [Unit.new(xy: bases[:pest], hp: 8)],
         },
-        buildings: {
-          Human => {
-            base: [bases[:human]],
-            fruits: [],
-            flowers: [],
-            seeds: [],
-            seeds0: [],
-          },
-          Pest => {
-            base: [bases[:pest]],
-            fruits: [],
-            flowers: [],
-            seeds: [],
-            seeds0: [],
-          },
-        },
+        buildings: buildings,
       )
     end
 
@@ -164,14 +176,7 @@ module Sketch
       Array.new(@size_y) {|y|
         Array.new(@size_x) {|x|
           background = environment_table[@hexes[y][x]]
-          background ||=
-            @buildings.filter_map {|p, bs|
-              bs.filter_map {|b, xys|
-                if xys.include?([x, y])
-                  building_table[p][b]
-                end
-              }.first
-            }.first
+          background ||= @buildings.at([x, y])&.then {|p, b| building_table[p][b] }
           background ||= '　'
 
           human = @unitss[Human].find { _1.xy == [x, y] }
@@ -273,7 +278,7 @@ module Sketch
       building_actions = []
       cost = @world.unitss[player].size ** 2
 
-      if @moneys[player] >= cost && !@world.unitss[player].any? {|unit| @world.buildings[player][:base].include?(unit.xy) }
+      if @moneys[player] >= cost && !@world.unitss[player].map(&:xy).include?(@world.buildings[player][:base][0])
         building_actions << [:spawn_unit, nil]
       end
 
