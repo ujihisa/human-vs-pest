@@ -36,18 +36,18 @@ module Sketch
 
       trees = Array.new(size_x * size_y / 10) {
         10.times.find {
-          xy = [rand(size_x), rand(size_y)]
-          if xy != bases[:human] && xy != bases[:pest]
-            break xy
+          loc = [rand(size_x), rand(size_y)]
+          if loc != bases[:human] && loc != bases[:pest]
+            break loc
           end
         } or raise 'Could not find a suitable tree location'
       }
 
       ponds = Array.new(size_x * size_y / 20) {
         10.times.find {
-          xy = [rand(size_x), rand(size_y)]
-          if xy != bases[:human] && xy != bases[:pest] && !trees.include?(xy)
-            break xy
+          loc = [rand(size_x), rand(size_y)]
+          if loc != bases[:human] && loc != bases[:pest] && !trees.include?(loc)
+            break loc
           end
         } or raise 'Could not find a suitable pond location'
       }
@@ -82,10 +82,10 @@ module Sketch
         },
       }
       # Returns (Player, Building)
-      def buildings.at(xy)
+      def buildings.at(loc)
         self.filter_map {|p, bs|
           bs.filter_map {|b, xys|
-            if xys.include?(xy)
+            if xys.include?(loc)
               [p, b]
             end
           }.first
@@ -97,19 +97,19 @@ module Sketch
         size_x: size_x,
         size_y: size_y,
         unitss: {
-          Human => [Unit.new(xy: bases[:human], hp: 8)],
-          Pest => [Unit.new(xy: bases[:pest], hp: 8)],
+          Human => [Unit.new(loc: bases[:human], hp: 8)],
+          Pest => [Unit.new(loc: bases[:pest], hp: 8)],
         },
         buildings: buildings,
       )
     end
 
-    def hex_at(xy)
-      @hexes[xy[1]][xy[0]]
+    def hex_at(loc)
+      @hexes[loc[1]][loc[0]]
     end
 
-    def neighbours(xy)
-      (x, y) = xy
+    def neighbours(loc)
+      (x, y) = loc
       # hexなので現在位置に応じて非対称
       diffs =
         if x.odd?
@@ -143,11 +143,11 @@ module Sketch
       }
     end
 
-    def not_passable?(xy)
-      (x, y) = xy
+    def not_passable?(loc)
+      (x, y) = loc
       @hexes[y][x] == :pond ||
-        (@unitss[Human].map(&:xy) == xy) ||
-        (@unitss[Pest].map(&:xy) == xy)
+        (@unitss[Human].map(&:loc) == loc) ||
+        (@unitss[Pest].map(&:loc) == loc)
     end
 
     # [[String]]
@@ -179,8 +179,8 @@ module Sketch
           background ||= @buildings.at([x, y])&.then {|p, b| building_table[p][b] }
           background ||= '　'
 
-          human = @unitss[Human].find { _1.xy == [x, y] }
-          pest = @unitss[Pest].find { _1.xy == [x, y] }
+          human = @unitss[Human].find { _1.loc == [x, y] }
+          pest = @unitss[Pest].find { _1.loc == [x, y] }
           unit =
             if human
               "🧍#{human.hp}"
@@ -216,29 +216,29 @@ module Sketch
       puts('=' * (@size_x * 6 + 1))
     end
 
-    # def find_unit_by_xy(xy)
-    #   @unitss.values.flatten(1).find { _1.xy == xy }
+    # def find_unit_by_xy(loc)
+    #   @unitss.values.flatten(1).find { _1.loc == loc }
     # end
   end
 
   class Unit
-    def initialize(xy:, hp:)
-      @xy = xy
+    def initialize(loc:, hp:)
+      @loc = loc
       @hp = hp
     end
-    attr_reader :xy
+    attr_reader :loc
     attr_accessor :hp
 
     # returns [(Integer, Integer)]
     def moveable(world:)
-      world.neighbours(@xy).select {|x, y|
+      world.neighbours(@loc).select {|x, y|
         !world.not_passable?([x, y]) &&
-          !world.unitss.values.flatten(1).any? { _1.xy == [x, y] }
+          !world.unitss.values.flatten(1).any? { _1.loc == [x, y] }
       }
     end
 
-    def move!(xy)
-      @xy = xy
+    def move!(loc)
+      @loc = loc
     end
 
     def dead?
@@ -278,7 +278,7 @@ module Sketch
       building_actions = []
       cost = @world.unitss[player].size ** 2
 
-      if @moneys[player] >= cost && !@world.unitss[player].map(&:xy).include?(@world.buildings[player][:base][0])
+      if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(@world.buildings[player][:base][0])
         building_actions << [:spawn_unit, nil]
       end
 
@@ -293,7 +293,7 @@ module Sketch
         cost = @world.unitss[player].size ** 2
 
         @moneys[player] -= cost
-        @world.unitss[player] << Unit.new(xy: @world.buildings[player][:base][0], hp: 8)
+        @world.unitss[player] << Unit.new(loc: @world.buildings[player][:base][0], hp: 8)
       end
     end
 
@@ -305,8 +305,8 @@ module Sketch
 
       actions = []
 
-      moves = unit.moveable(world: @world).each {|xy|
-        actions << [:move, xy]
+      moves = unit.moveable(world: @world).each {|loc|
+        actions << [:move, loc]
       }
 
       if unit.hp < 8
@@ -314,30 +314,30 @@ module Sketch
       end
 
 
-      if @world.hex_at(unit.xy) == :tree
+      if @world.hex_at(unit.loc) == :tree
         actions << [:harvest_woods, nil]
       end
 
-      if vacant?(unit.xy)
+      if vacant?(unit.loc)
         actions << [:farming, nil]
       end
 
-      if @world.buildings[player][:fruits].include?(unit.xy)
+      if @world.buildings[player][:fruits].include?(unit.loc)
         actions << [:harvest_fruit, nil]
       end
 
-      neighbours = @world.neighbours(unit.xy)
+      neighbours = @world.neighbours(unit.loc)
       melee_attack =
         if 2 < unit.hp
           @world.unitss[player.opponent].flat_map {|ounit|
-            if neighbours.include?(ounit.xy)
+            if neighbours.include?(ounit.loc)
               actions << [:melee_attack, ounit]
             end
           }
         end
 
       @world.buildings[player.opponent].each do |b, xys|
-        if xys.include?(unit.xy)
+        if xys.include?(unit.loc)
           actions << [:destroy, nil]
         end
       end
@@ -345,30 +345,30 @@ module Sketch
       actions
     end
 
-    private def vacant?(xy)
-      if @world.hex_at(xy)
+    private def vacant?(loc)
+      if @world.hex_at(loc)
         return false
       end
 
       buildings = @world.buildings.values.flat_map { _1.values.flatten(1) }
-      !buildings.include?(xy)
+      !buildings.include?(loc)
     end
 
     def unit_action!(player, unit, action)
       case action
-      in [:move, xy]
-        unit.move!(xy)
+      in [:move, loc]
+        unit.move!(loc)
       in [:idle, nil]
         unit.hp = [unit.hp + 3, 8].min
       in [:harvest_woods, nil]
         @woods[player] += 3
 
         # TODO: Dirty hack
-        @world.hexes[unit.xy[1]][unit.xy[0]] = nil
+        @world.hexes[unit.loc[1]][unit.loc[0]] = nil
       in [:farming, nil]
-        @world.buildings[player][:seeds0] << unit.xy
+        @world.buildings[player][:seeds0] << unit.loc
       in [:harvest_fruit, nil]
-        @world.buildings[player][:fruits].delete(unit.xy)
+        @world.buildings[player][:fruits].delete(unit.loc)
         @moneys[player] += 3
       in [:melee_attack, target_unit]
         # p 'Melee attack!'
@@ -382,10 +382,10 @@ module Sketch
         unit.hp -= 2
       in [:destroy, nil]
         @world.buildings[player.opponent].each do |b, xys|
-          xys.each do |xy|
+          xys.each do |loc|
             # there should be exactly one
-            if xy == unit.xy
-              xys.delete(xy)
+            if loc == unit.loc
+              xys.delete(loc)
             end
           end
         end
@@ -423,8 +423,8 @@ module Sketch
         ua
       else
         # 一気に攻撃するタイミング
-        ua = uas.select {|a, _| a == :move }.min_by {|_, xy|
-          distance(xy, game.world.buildings[player.opponent][:base][0])
+        ua = uas.select {|a, _| a == :move }.min_by {|_, loc|
+          distance(loc, game.world.buildings[player.opponent][:base][0])
         }
         ua
       end

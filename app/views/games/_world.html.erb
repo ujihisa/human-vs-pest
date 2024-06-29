@@ -14,14 +14,14 @@
               <%= hexes_view[y][x] %>
             </nobr>
           </div>
-          <% if [x, y] == human_focus&.xy %>
+          <% if [x, y] == human_focus&.loc %>
             <font style="font-size: 32px;">
               [🧍]
             </font>
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
               <%= human_focus.hp %>
             </div>
-          <% elsif human = game.world.unitss[Sketch::Human].find { [x, y] == _1.xy } %>
+          <% elsif human = game.world.unitss[Sketch::Human].find { [x, y] == _1.loc } %>
             <font style="font-size: 32px;">
               🧍
             </font>

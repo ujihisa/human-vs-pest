@@ -43,9 +43,9 @@ class WorldTag < Live::View
     case event[:type]
     when 'click'
       (x, y) = [event[:x], event[:y]]
-      if @@human_focus&.xy == [x, y]
+      if @@human_focus&.loc == [x, y]
         @@human_focus = nil
-      elsif human = @@game.world.unitss[Sketch::Human].find { _1.xy == [x, y] }
+      elsif human = @@game.world.unitss[Sketch::Human].find { _1.loc == [x, y] }
         @@human_focus = human
       elsif @@human_focus&.moveable(world: @@game.world)&.include?([x, y])
         @@human_focus.move!([x, y])
@@ -54,8 +54,8 @@ class WorldTag < Live::View
         @@human_flush = "そのマスには何もできません: #{{
           focus: @@human_focus.to_json,
           moveable: @@human_focus&.moveable(world: @@game.world),
-          neighbours: @@game.world.neighbours(@@human_focus&.xy),
-          xy: [x, y],
+          neighbours: @@game.world.neighbours(@@human_focus&.loc),
+          loc: [x, y],
         }}"
       end
       update!
