@@ -65,23 +65,6 @@ module Sketch
         }
       }
 
-      buildings = {
-        Human => {
-          base: [bases[:human]],
-          fruits: [],
-          flowers: [],
-          seeds: [],
-          seeds0: [],
-        },
-        Pest => {
-          base: [bases[:pest]],
-          fruits: [],
-          flowers: [],
-          seeds: [],
-          seeds0: [],
-        },
-      }
-
       new(
         hexes: hexes,
         size_x: size_x,
@@ -90,7 +73,22 @@ module Sketch
           Human => [Unit.new(xy: bases[:human], hp: 8)],
           Pest => [Unit.new(xy: bases[:pest], hp: 8)],
         },
-        buildings: buildings,
+        buildings: {
+          Human => {
+            base: [bases[:human]],
+            fruits: [],
+            flowers: [],
+            seeds: [],
+            seeds0: [],
+          },
+          Pest => {
+            base: [bases[:pest]],
+            fruits: [],
+            flowers: [],
+            seeds: [],
+            seeds0: [],
+          },
+        },
       )
     end
 
@@ -259,7 +257,7 @@ module Sketch
     end
     attr_reader :world, :moneys, :woods, :turn
 
-    # only if the game is already finished
+    # Returns `nil` if the game is still ongoing
     def winner
       if @world.buildings[Human][:base].empty?
         Pest
@@ -271,18 +269,18 @@ module Sketch
     end
 
     # returns [[Symbol, Object]]
-    def player_actions(player)
-      player_actions = []
+    def building_actions(player)
+      building_actions = []
       cost = @world.unitss[player].size ** 2
 
       if @moneys[player] >= cost && !@world.unitss[player].any? {|unit| @world.buildings[player][:base].include?(unit.xy) }
-        player_actions << [:spawn_unit, nil]
+        building_actions << [:spawn_unit, nil]
       end
 
-      player_actions
+      building_actions
     end
 
-    def player_action!(player, action)
+    def building_action!(player, action)
       case action
       in [:remove_building, [x, y]]
         raise 'Not implemented yet'
@@ -296,6 +294,10 @@ module Sketch
 
     # returns [[Symbol, Object]]
     def unit_actions(player, unit)
+      if self.winner
+        return []
+      end
+
       actions = []
 
       moves = unit.moveable(world: @world).each {|xy|
@@ -433,29 +435,23 @@ module Sketch
     game.draw
 
 
+    player = Human
     until winner = game.winner do
-      pa = game.player_actions(Human).sample
-      game.player_action!(Human, pa) if pa
+      pa = game.building_actions(player).sample
+      game.building_action!(player, pa) if pa
 
-      pa = game.player_actions(Pest).sample
-      game.player_action!(Pest, pa) if pa
-
-      game.world.unitss[Human].each do |u|
-        uas = game.unit_actions(Human, u)
-        ua = AI.unit_action_for(game, Human, u, uas)
+      game.world.unitss[player].each do |u|
+        uas = game.unit_actions(player, u)
+        ua = AI.unit_action_for(game, player, u, uas)
         p ua
-        game.unit_action!(Human, u, ua) if ua
+        game.unit_action!(player, u, ua) if ua
       end
+      player = player.opponent
 
-      game.world.unitss[Pest].each do |u|
-        uas = game.unit_actions(Pest, u)
-        ua = AI.unit_action_for(game, Pest, u, uas)
-        p ua
-        game.unit_action!(Pest, u, ua) if ua
+      if player == Human
+        game.tick!
+        game.draw
       end
-
-      game.tick!
-      game.draw
     end
     p "#{winner} won!"
   end

@@ -64,8 +64,8 @@ class WorldTag < Live::View
       @@autoplaying = true
       Async do
         50.times do
-          pa = @@game.player_actions(Sketch::Human).sample
-          @@game.player_action!(Sketch::Human, pa) if pa
+          pa = @@game.building_actions(Sketch::Human).sample
+          @@game.building_action!(Sketch::Human, pa) if pa
           @@turn_events << pa.to_json if pa
           update!
           sleep 0.1
@@ -79,8 +79,8 @@ class WorldTag < Live::View
           update!
           sleep 0.1
 
-          pa = @@game.player_actions(Sketch::Pest).sample
-          @@game.player_action!(Sketch::Pest, pa) if pa
+          pa = @@game.building_actions(Sketch::Pest).sample
+          @@game.building_action!(Sketch::Pest, pa) if pa
           @@turn_events << pa.to_json if pa
           update!
           sleep 0.1
