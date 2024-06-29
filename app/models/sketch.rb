@@ -95,7 +95,7 @@ module Sketch
     end
 
     def hex_at(xy)
-      @hexes[xy[0]][xy[1]]
+      @hexes[xy[1]][xy[0]]
     end
 
     def neighbours(xy)
@@ -140,64 +140,73 @@ module Sketch
         (@unitss[Pest].map(&:xy) == xy)
     end
 
-    def draw
-      main = -> (x, y) {
-        environment_table = {
-          pond: '🌊',
-          tree: '🌲',
-        }
-        building_table = {
-          Human => {
-            base: '🏠',
-            fruits: '🍓',
-            flowers: '🌷',
-            seeds: '🌱',
-            seeds0: '🌱',
-          },
-          Pest => {
-            base: '🪺',
-            fruits: '🍄',
-            flowers: '🦠',
-            seeds: '🧬',
-            seeds0: '🧬',
-          }
-        }
-        background = environment_table[@hexes[x][y]]
-        background ||=
-          @buildings.filter_map {|p, bs|
-            bs.filter_map {|b, xys|
-              if xys.include?([x, y])
-                building_table[p][b]
-              end
-            }.first
-          }.first
-        background ||= '　'
-
-        human = @unitss[Human].find { _1.xy == [x, y] }
-        pest = @unitss[Pest].find { _1.xy == [x, y] }
-        unit =
-          if human
-            "🧍#{human.hp}"
-          elsif pest
-            raise "duplicated unit location: #{x}, #{y}" if human
-            "🐛#{pest.hp}"
-          else
-            '　 '
-          end
-        print "#{background}#{unit}"
+    # [[String]]
+    def hexes_view
+      environment_table = {
+        pond: '🌊',
+        tree: '🌲',
       }
-      # main = -> (x, y) { print "#{x}, #{y}" }
+      building_table = {
+        Human => {
+          base: '🏠',
+          fruits: '🍓',
+          flowers: '🌷',
+          seeds: '🌱',
+          seeds0: '🌱',
+        },
+        Pest => {
+          base: '🪺',
+          fruits: '🍄',
+          flowers: '🦠',
+          seeds: '🧬',
+          seeds0: '🧬',
+        }
+      }
+
+      Array.new(@size_y) {|y|
+        Array.new(@size_x) {|x|
+          background = environment_table[@hexes[y][x]]
+          background ||=
+            @buildings.filter_map {|p, bs|
+              bs.filter_map {|b, xys|
+                if xys.include?([x, y])
+                  building_table[p][b]
+                end
+              }.first
+            }.first
+          background ||= '　'
+
+          human = @unitss[Human].find { _1.xy == [x, y] }
+          pest = @unitss[Pest].find { _1.xy == [x, y] }
+          unit =
+            if human
+              "🧍#{human.hp}"
+            elsif pest
+              raise "duplicated unit location: #{x}, #{y}" if human
+              "🐛#{pest.hp}"
+            else
+              '　 '
+            end
+          "#{background}#{unit}"
+
+          # "#{x}, #{y}"
+        }
+      }
+    end
+
+    def draw
+      hexes_view = hexes_view()
 
       (0...@size_y).each do |y|
         print '|'
         (0.step(@size_x - 1, 2)).each do |x|
           print '|.....|' if x > 0
-          main.(x, y)
+          print hexes_view[y][x]
         end
         puts '|'
         (1.step(@size_x - 1, 2)).each do |x|
           print '|.....|'
-          main.(x, y)
+          print hexes_view[y][x]
         end
         puts '|.....|'
       end
@@ -337,7 +346,7 @@ module Sketch
         @woods[player] += 3
 
         # TODO: Dirty hack
-        @world.hexes[unit.xy[0]][unit.xy[1]] = nil
+        @world.hexes[unit.xy[1]][unit.xy[0]] = nil
       in [:farming, nil]
         @world.buildings[player][:seeds0] << unit.xy
       in [:harvest_fruit, nil]

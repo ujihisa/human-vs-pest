@@ -28,6 +28,7 @@ class WorldTag < Live::View
         world: @@world,
         human_focus: @@human_focus,
         human_flush: @@human_flush,
+        hexes_view: @@world.hexes_view,
       },
     ))
   end
