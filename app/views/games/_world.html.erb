@@ -1,5 +1,5 @@
-<div style="height: 640px; border: solid 1px black">
-  <% world.hexes.each_with_index do |hexes_y, y| %>
+<div style="height: 640px; width: 480px; margin: auto; border: solid 0px black">
+  <% game.world.hexes.each_with_index do |hexes_y, y| %>
     <% hexes_y.each_with_index do |background, x| %>
       <% background = 'nil' if background.nil? %>
       <% padding_top = x.even? ? 64*y : 64*y + 32 %>
@@ -21,14 +21,14 @@
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
               <%= human_focus.hp %>
             </div>
-          <% elsif human = world.unitss[Sketch::Human].find { [x, y] == _1.xy } %>
+          <% elsif human = game.world.unitss[Sketch::Human].find { [x, y] == _1.xy } %>
             <font style="font-size: 32px;">
               🧍
             </font>
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
               <%= human.hp %>
             </div>
-          <% elsif human_focus&.moveable(world: world)&.include?([x, y]) %>
+          <% elsif human_focus&.moveable(world: game.world)&.include?([x, y]) %>
             移動
           <% else %>
             <!--
@@ -42,7 +42,7 @@
     <% end %>
   <% end %>
 
-  <div style="position: absolute; margin: 0px <%= 64 * world.size_x %>px;">
+  <div style="position: absolute; margin: 0px <%= 64 * game.world.size_x %>px;">
     <h2>Human</h2>
     <p>Focus: <%= human_focus.to_json %></p>
 
@@ -53,5 +53,12 @@
     <h2>Debug</h2>
     <input type="submit" value="Autoplay"
            onclick="live.forward('world', {type: 'autoplay', clientX: event.clientX, clientY: event.clientY});">
+    <h2>ゲーム</h2>
+    <div>ターン <%= game.turn %></div>
+    <ul>
+      <% turn_events.each do |turn_event| %>
+        <li><%= turn_event %></li>
+      <% end %>
+    </ul>
   </div>
 </div>
