@@ -4,7 +4,8 @@ require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
   @@world = Sketch::World.create(size_x: 5, size_y: 8)
-  @@human_xy = [2, 0]
+  @@human_focus = nil
+
   def initialize(...)
     super(...)
   end
@@ -21,34 +22,27 @@ class WorldTag < Live::View
   end
 
   def render(builder)
-    # builder.tag('div', onclick: forward_event) do
-    world = @@world
-    human_xy = @@human_xy
-    builder.append(ERB.new(<<~'EOF').result(binding()))
-      <div style="height: 640px; border: solid 1px black">
-        <% world.hexes.each_with_index do |hexes_y, y| %>
-          <% hexes_y.each_with_index do |background, x| %>
-            <% background = 'nil' if background.nil? %>
-            <% padding_top = x.even? ? 64*y : 64*y + 32 %>
-            <% padding_right = 48*x %>
-            <div style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_right %>px 0px;" onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});">
-              <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
-              <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 32px;">
-                <%= '🧍' if [x, y] == human_xy %>
-                <%= '🐛' if [x, y] == [2, 7] %>
-              </div>
-            </div>
-          <% end %>
-        <% end %>
-      </div>
-    EOF
+    builder.append(ERB.new(File.read('app/views/games/_world.html.erb')).result_with_hash(
+      {
+        world: @@world,
+        human_focus: @@human_focus,
+      },
+    ))
   end
 
   def handle(event)
     pp event
     case event[:type]
     when 'click'
-      @@human_xy = [event[:x], event[:y]]
+      (x, y) = [event[:x], event[:y]]
+      if @@human_focus&.xy == [x, y]
+        @@human_focus = nil
+      elsif human = @@world.unitss[Sketch::Human].find { _1.xy == [x, y] }
+        @@human_focus = human
+      elsif @@human_focus&.moveable(world: @@world)&.include?([x, y])
+        @@human_focus.move!([x, y])
+        @@human_focus = nil
+      end
       update!
     end
   end

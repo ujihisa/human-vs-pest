@@ -1,0 +1,41 @@
+<div style="height: 640px; border: solid 1px black">
+  <% world.hexes.each_with_index do |hexes_y, y| %>
+    <% hexes_y.each_with_index do |background, x| %>
+      <% background = 'nil' if background.nil? %>
+      <% padding_top = x.odd? ? 64*y : 64*y + 32 %>
+      <% padding_left = 48*x %>
+      <div style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_left %>px 0px;" onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});">
+        <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+          <% if [x, y] == human_focus&.xy %>
+            <font style="font-size: 32px;">
+              [🧍]
+            </font>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
+              <%= human_focus.hp %>
+            </div>
+          <% elsif human = world.unitss[Sketch::Human].find { [x, y] == _1.xy } %>
+            <font style="font-size: 32px;">
+              🧍
+            </font>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
+              <%= human.hp %>
+            </div>
+          <% elsif [x, y] == [2, 7] %>
+            <font style="font-size: 32px;">
+              🐛
+            </font>
+          <% elsif human_focus&.moveable(world: world)&.include?([x, y]) %>
+            移動
+          <% else %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div style="position: absolute; margin: 0px <%= 64 * world.size_x %>px;">
+    <h2>Human</h2>
+    <p>Focus: <%= human_focus.to_json %></p>
+  </div>
+</div>

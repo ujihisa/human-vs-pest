@@ -203,6 +203,10 @@ module Sketch
       end
       puts('=' * (@size_x * 6 + 1))
     end
+
+    # def find_unit_by_xy(xy)
+    #   @unitss.values.flatten(1).find { _1.xy == xy }
+    # end
   end
 
   class Unit
