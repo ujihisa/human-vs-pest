@@ -65,28 +65,22 @@ class WorldTag < Live::View
       return if @@autoplaying
       @@autoplaying = true
       Async do
-        player = Sketch::Human
-        until winner = @@game.winner do
-          pa = @@game.building_actions(player).sample
-          @@game.building_action!(player, pa) if pa
-          update!; sleep 0.1
+        players = [Sketch::Human, Sketch::Pest]
+        while @@turn = @@turn.next do
+          players.each do |player|
+            pa = @@game.building_actions(player).sample
+            @@game.building_action!(player, pa) if pa
+            update!; sleep 0.1
 
-          @@turn.actionable_units[player].each do |u|
-            uas = @@game.unit_actions(player, u)
-            ua = Sketch::AI.unit_action_for(@@game, player, u, uas)
-            @@turn.unit_action!(player, u, ua) if ua
+            @@turn.actionable_units[player].each do |u|
+              uas = @@game.unit_actions(player, u)
+              ua = Sketch::AI.unit_action_for(@@game, player, u, uas)
+              @@turn.unit_action!(player, u, ua) if ua
+            end
+            update!; sleep 0.1
           end
-          update!; sleep 0.1
-
-          player = player.opponent
-
-          if player == Sketch::Human
-            @@game.tick!
-            @@turn = @@turn.next
-            sleep 0.5
-          end
+          sleep 0.3
         end
-        update!
       end
     end
   end

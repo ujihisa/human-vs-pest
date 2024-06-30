@@ -288,7 +288,7 @@ module Sketch
 
       if @game.winner
         @messages << "#{game.winner.japanese} が勝利しました!"
-        @actionable_units = {}
+        @actionable_units = { Human => [], Pest => [] }
       end
     end
 
@@ -302,6 +302,7 @@ module Sketch
       if @game.winner
         nil
       else
+        @game.tick!
         Turn.new(num: @num + 1, game: @game)
       end
     end
@@ -487,21 +488,18 @@ module Sketch
     game = turn.game
     turn.draw
 
-    player = Human
-    while turn = turn.next
-      pa = game.building_actions(player).sample
-      game.building_action!(player, pa) if pa
+    players = [Human, Pest]
+    while turn = turn.next do
+      players.each do |player|
+        pa = game.building_actions(player).sample
+        game.building_action!(player, pa) if pa
 
-      turn.actionable_units[player].each do |u|
-        uas = game.unit_actions(player, u)
-        ua = AI.unit_action_for(game, player, u, uas)
-        turn.unit_action!(player, u, ua) if ua
-      end
-      turn.draw
-
-      player = player.opponent
-      if player == Human
-        game.tick!
+        turn.actionable_units[player].each do |u|
+          uas = game.unit_actions(player, u)
+          ua = AI.unit_action_for(game, player, u, uas)
+          turn.unit_action!(player, u, ua) if ua
+        end
+        turn.draw
       end
     end
   end
