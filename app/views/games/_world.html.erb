@@ -1,12 +1,15 @@
 <div style="height: 640px; width: 480px; margin: auto; border: solid 0px black">
   <% game.world.hexes.each_with_index do |hexes_y, y| %>
     <% hexes_y.each_with_index do |background, x| %>
+      <% loc = Location.new(x, y) %>
       <% background = 'nil' if background.nil? %>
       <% padding_top = x.even? ? 64*y : 64*y + 32 %>
       <% padding_left = 48*x %>
       <div
           style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_left %>px 0px; user-select: none;"
-          onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});">
+          onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});"
+          oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
+          >
         <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
           <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
@@ -14,29 +17,29 @@
               <%= hexes_view[y][x] %>
             </nobr>
           </div>
-          <% if [x, y] == human_focus&.loc %>
+          <% if human_focus&.loc == loc %>
             <font style="font-size: 32px;">
               [🧍]
             </font>
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
               <%= human_focus.hp %>
             </div>
-          <% elsif human = game.world.unitss[Human].find { Location.new(x, y) == _1.loc } %>
+          <% elsif human = game.world.unitss[Human].find { loc == _1.loc } %>
             <font style="font-size: 32px;">
               🧍
             </font>
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
               <%= human.hp %>
             </div>
-          <% elsif human_focus&.moveable(world: game.world)&.include?(Location.new(x, y)) %>
-            移動
-          <% else %>
-            <!--
-              <nobr>
-              <%= [x, y] %>
-              </nobr>
-            -->
           <% end %>
+          <% if human_focus && turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
+            <%= game.reason_action(Human, human_focus, loc) %>
+          <% end %>
+          <!--
+            <nobr>
+            <%= [x, y] %>
+            </nobr>
+          -->
         </div>
       </div>
     <% end %>
@@ -51,10 +54,12 @@
     <% end %>
 
     <h2>Debug</h2>
-    <input type="submit" value="Autoplay"
+    <input type="submit"
+           value="Autoplay"
            onclick="live.forward('world', {type: 'autoplay', clientX: event.clientX, clientY: event.clientY});">
     <br><br><br><br>
-    <input type="submit" value="Reset"
+    <input type="submit"
+           value="Reset"
            onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
 
     <h2>ゲーム</h2>

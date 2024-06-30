@@ -43,23 +43,19 @@ class WorldTag < Live::View
     case event[:type]
     when 'click'
       (x, y) = [event[:x], event[:y]]
-      if @@human_focus&.loc == Location.new(x, y)
+      loc = Location.new(x, y)
+      if @@human_focus
+        if @@turn.unit_actionable_locs(Human, @@human_focus).include?(loc)
+          @@turn.unit_action!(Human, @@human_focus, loc)
+        end
         @@human_focus = nil
-      elsif human = @@game.world.unitss[Human].find { _1.loc == Location.new(x, y) }
-        @@human_focus = human
-      elsif @@human_focus&.moveable(world: @@game.world)&.include?(Location.new(x, y))
-        @@human_focus.move!(Location.new(x, y))
-        @@human_focus = nil
-      elsif @@human_focus
-        @@human_flush = "そのマスには何もできません: #{{
-          focus: @@human_focus.to_json,
-          moveable: @@human_focus.moveable(world: @@game.world),
-          neighbours: @@game.world.neighbours(@@human_focus.loc),
-          loc: Location.new(x, y),
-        }}"
       else
-        @human_flush = 'Must not happen'
+        human = @@game.world.unitss[Human].find { _1.loc == loc }
+        @@human_focus = human if human
       end
+      update!
+    when 'rightclick'
+      @@human_focus = nil
       update!
     when 'autoplay'
       return if @@autoplaying

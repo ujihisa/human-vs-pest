@@ -126,6 +126,11 @@ class World
     @hexes[loc.y][loc.x]
   end
 
+  # neighboursとほぼ同じだが、隣接するだけでなく、自分自身も含む
+  def reachable(loc)
+    [loc, *neighbours(loc)]
+  end
+
   def neighbours(loc)
     raise "Missing loc" unless loc
 
@@ -316,44 +321,53 @@ class GameState
     end
   end
 
-  # returns [[Symbol, Location]]
+  # nil | Symbol
+  def reason_action(player, unit, loc)
+    return nil if self.winner
+
+    if unit.loc == loc
+      if @world.hex_at(unit.loc) == :tree
+        return :harvest_woods
+      end
+
+      (owner, b) = @world.buildings.at(unit.loc)
+      if owner == player && b.type == :fruits
+        return :harvest_fruit
+      elsif owner == player.opponent
+        return :destroy
+      end
+
+      if b.nil?
+        return :farming
+      end
+    end
+
+    if 2 < unit.hp
+      if @world.unitss[player.opponent].find { loc == _1.loc }
+        return :melee_attack
+      end
+    end
+
+    if unit.moveable(world: @world).include?(loc)
+      return :move
+    end
+
+    nil
+  end
+
+
+  # returns [[Location, Symbol]]
   def unit_actions(player, unit)
     return [] if self.winner
 
-    actions = []
+    locs = world.reachable(unit.loc)
 
-     unit.moveable(world: @world).each {|loc|
-      actions << [:move, loc]
-    }
-
-    if @world.hex_at(unit.loc) == :tree
-      actions << [:harvest_woods, unit.loc]
-    end
-
-    if vacant?(unit.loc)
-      actions << [:farming, unit.loc]
-    end
-
-    if @world.buildings.of(player, :fruits)&.loc == unit.loc
-      actions << [:harvest_fruit, unit.loc]
-    end
-
-    neighbours = @world.neighbours(unit.loc)
-    melee_attack =
-      if 2 < unit.hp
-        @world.unitss[player.opponent].flat_map {|ounit|
-          if neighbours.include?(ounit.loc)
-            actions << [:melee_attack, ounit.loc]
-          end
-        }
+    locs.filter_map {|loc|
+      action = reason_action(player, unit, loc)
+      if action
+        [loc, action]
       end
-
-    (p, _) = @world.buildings.at(unit.loc)
-    if p == player.opponent
-      actions << [:destroy, unit.loc]
-    end
-
-    actions
+    }
   end
 
   private def vacant?(loc)
@@ -364,19 +378,21 @@ class GameState
     @world.buildings.at(loc).nil?
   end
 
-  def unit_action!(player, unit, action)
+  def do_unit_action!(player, unit, loc_w_action)
+    (loc, action) = loc_w_action
+
     case action
-    in [:move, loc]
+    when :move
       unit.move!(loc)
-    in [:harvest_woods, loc]
+    when :harvest_woods
       @woods[player] += 3
       @world.hexes[loc.y][loc.x] = nil
-    in [:farming, loc]
+    when :farming
       @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
-    in [:harvest_fruit, loc]
+    when :harvest_fruit
       @world.buildings.delete_at(loc)
       @moneys[player] += 3
-    in [:melee_attack, loc]
+    when :melee_attack
       target_unit = @world.unitss[player.opponent].find { _1.loc == loc }
       # p 'Melee attack!'
       target_unit.hp -= 4
@@ -387,7 +403,7 @@ class GameState
       end
 
       unit.hp -= 2
-    in [:destroy, loc]
+    when :destroy
       @world.buildings.delete_at(loc)
     end
   end
@@ -422,17 +438,17 @@ end
 module AI
   def self.unit_action_for(game, player, u, uas)
     # 破壊と近接攻撃は無条件で最優先
-    ua = uas.find { [:destroy, :melee_attack].include?(_1[0]) }
+    ua = uas.find { [:destroy, :melee_attack].include?(_1[1]) }
     return ua if ua
 
     if game.world.unitss[player].size < 3
       # 成長を狙うタイミング
-      ua = uas.select {|a, _| a != :move }.sample
+      ua = uas.select {|_, a| a != :move }.sample
       ua ||= uas.sample
       ua
     else
       # 一気に攻撃するタイミング
-      ua = uas.select {|a, _| a == :move }.min_by {|_, loc|
+      ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
         distance(loc, game.world.buildings.of(player.opponent, :base).loc)
       }
       ua
@@ -461,7 +477,7 @@ if __FILE__ == $0
       turn.actionable_units[player].each do |u|
         uas = game.unit_actions(player, u)
         ua = AI.unit_action_for(game, player, u, uas)
-        turn.unit_action!(player, u, ua) if ua
+        turn.unit_action!(player, u, ua.first) if ua
       end
     end
     turn.draw

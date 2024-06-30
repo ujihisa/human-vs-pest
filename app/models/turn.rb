@@ -10,10 +10,23 @@ class Turn
   end
   attr_reader :num, :game, :actionable_units, :messages
 
-  def unit_action!(player, unit, action)
+  def unit_actionable_locs(player, unit)
+    return [] if @game.winner
+    return [] if !@actionable_units[player].include?(unit)
+
+    @game.unit_actions(player, unit).map(&:first)
+  end
+
+  def unit_action!(player, unit, loc)
+    raise 'must not happen: The game is already finished' if @game.winner
+    raise 'must not happen: The unit is not actionable' unless @actionable_units[player].include?(unit)
+
+    action = @game.reason_action(player, unit, loc)
+    raise "reason_action returned nil for #{player.japanese} #{unit.loc.inspect} -> #{loc.inspect}" unless action
+
     @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが #{action} しました"
 
-    @game.unit_action!(player, unit, action)
+    @game.do_unit_action!(player, unit, [loc, action])
     @actionable_units[player] -= [unit]
 
     if @game.winner
