@@ -21,14 +21,14 @@
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
               <%= human_focus.hp %>
             </div>
-          <% elsif human = game.world.unitss[Sketch::Human].find { Sketch::Location.new(x, y) == _1.loc } %>
+          <% elsif human = game.world.unitss[Human].find { Location.new(x, y) == _1.loc } %>
             <font style="font-size: 32px;">
               🧍
             </font>
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
               <%= human.hp %>
             </div>
-          <% elsif human_focus&.moveable(world: game.world)&.include?(Sketch::Location.new(x, y)) %>
+          <% elsif human_focus&.moveable(world: game.world)&.include?(Location.new(x, y)) %>
             移動
           <% else %>
             <!--

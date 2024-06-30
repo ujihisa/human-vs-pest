@@ -3,7 +3,7 @@
 require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
-  @@turn = Sketch::Turn.new(num: 1, game: Sketch::Game.new(world: Sketch::World.create(size_x: 5, size_y: 8)))
+  @@turn = Turn.new(num: 1, game: GameState.new(world: World.create(size_x: 5, size_y: 8)))
   @@game = @@turn.game
   @@human_focus = nil
   @@human_flush = nil
@@ -43,19 +43,19 @@ class WorldTag < Live::View
     case event[:type]
     when 'click'
       (x, y) = [event[:x], event[:y]]
-      if @@human_focus&.loc == Sketch::Location.new(x, y)
+      if @@human_focus&.loc == Location.new(x, y)
         @@human_focus = nil
-      elsif human = @@game.world.unitss[Sketch::Human].find { _1.loc == Sketch::Location.new(x, y) }
+      elsif human = @@game.world.unitss[Human].find { _1.loc == Location.new(x, y) }
         @@human_focus = human
-      elsif @@human_focus&.moveable(world: @@game.world)&.include?(Sketch::Location.new(x, y))
-        @@human_focus.move!(Sketch::Location.new(x, y))
+      elsif @@human_focus&.moveable(world: @@game.world)&.include?(Location.new(x, y))
+        @@human_focus.move!(Location.new(x, y))
         @@human_focus = nil
       elsif @@human_focus
         @@human_flush = "そのマスには何もできません: #{{
           focus: @@human_focus.to_json,
           moveable: @@human_focus.moveable(world: @@game.world),
           neighbours: @@game.world.neighbours(@@human_focus.loc),
-          loc: Sketch::Location.new(x, y),
+          loc: Location.new(x, y),
         }}"
       else
         @human_flush = 'Must not happen'
@@ -65,7 +65,7 @@ class WorldTag < Live::View
       return if @@autoplaying
       @@autoplaying = true
       Async do
-        players = [Sketch::Human, Sketch::Pest]
+        players = [Human, Pest]
         loop do
           players.each do |player|
             pa = @@game.building_actions(player).sample
@@ -74,7 +74,7 @@ class WorldTag < Live::View
 
             @@turn.actionable_units[player].each do |u|
               uas = @@game.unit_actions(player, u)
-              ua = Sketch::AI.unit_action_for(@@game, player, u, uas)
+              ua = AI.unit_action_for(@@game, player, u, uas)
               @@turn.unit_action!(player, u, ua) if ua
             end
             update!; sleep 0.1
