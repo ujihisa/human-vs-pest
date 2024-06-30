@@ -16,11 +16,19 @@ module Sketch
     def self.opponent
       Pest
     end
+
+    def self.japanese
+      '人間'
+    end
   end
 
   module Pest
     def self.opponent
       Human
+    end
+
+    def self.japanese
+      '害虫'
     end
   end
 
@@ -266,17 +274,36 @@ module Sketch
     def initialize(num:, game:)
       @num = num
       @game = game
+
       @actionable_units = @game.world.unitss.transform_values(&:dup).dup
+      @messages = []
     end
-    attr_reader :num, :actionable_units
+    attr_reader :num, :game, :actionable_units, :messages
 
     def unit_action!(player, unit, action)
+      @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが #{action} しました"
+
       @game.unit_action!(player, unit, action)
       @actionable_units[player] -= [unit]
+
+      if @game.winner
+        @messages << "#{game.winner.japanese} が勝利しました!"
+        @actionable_units = {}
+      end
+    end
+
+    def draw
+      puts "Turn #{@num}"
+      puts @messages
+      @game.draw
     end
 
     def next
-      Turn.new(num: @num + 1, game: @game)
+      if @game.winner
+        nil
+      else
+        Turn.new(num: @num + 1, game: @game)
+      end
     end
   end
 
@@ -453,33 +480,29 @@ module Sketch
   end
 
   if __FILE__ == $0
-    game = Game.new(world: World.create(size_x: 5, size_y: 8))
     turn = Turn.new(
       num: 1,
-      game: game,
+      game: Game.new(world: World.create(size_x: 5, size_y: 8)),
     )
-    game.draw
+    game = turn.game
+    turn.draw
 
     player = Human
-    until winner = game.winner do
+    while turn = turn.next
       pa = game.building_actions(player).sample
       game.building_action!(player, pa) if pa
 
       turn.actionable_units[player].each do |u|
         uas = game.unit_actions(player, u)
         ua = AI.unit_action_for(game, player, u, uas)
-        p ua
         turn.unit_action!(player, u, ua) if ua
       end
+      turn.draw
 
       player = player.opponent
-
       if player == Human
         game.tick!
-        game.draw
-        turn = turn.next
       end
     end
-    p "#{game.winner} won!"
   end
 end

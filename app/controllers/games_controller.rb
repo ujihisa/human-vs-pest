@@ -3,11 +3,10 @@
 require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
-  @@game = Sketch::Game.new(world: Sketch::World.create(size_x: 5, size_y: 8))
-  @@turn = Sketch::Turn.new(num: 1, game: @@game)
+  @@turn = Sketch::Turn.new(num: 1, game: Sketch::Game.new(world: Sketch::World.create(size_x: 5, size_y: 8)))
+  @@game = @@turn.game
   @@human_focus = nil
   @@human_flush = nil
-  @@turn_events = []
   @@autoplaying = false
 
   def initialize(...)
@@ -33,7 +32,6 @@ class WorldTag < Live::View
         human_focus: @@human_focus,
         human_flush: @@human_flush,
         hexes_view: @@game.world.hexes_view,
-        turn_events: @@turn_events,
       },
     ))
   end
@@ -71,14 +69,12 @@ class WorldTag < Live::View
         until winner = @@game.winner do
           pa = @@game.building_actions(player).sample
           @@game.building_action!(player, pa) if pa
-          @@turn_events << pa.to_json if pa
           update!; sleep 0.1
 
           @@turn.actionable_units[player].each do |u|
             uas = @@game.unit_actions(player, u)
             ua = Sketch::AI.unit_action_for(@@game, player, u, uas)
             @@turn.unit_action!(player, u, ua) if ua
-            @@turn_events << ua.to_json if ua
           end
           update!; sleep 0.1
 
@@ -87,11 +83,9 @@ class WorldTag < Live::View
           if player == Sketch::Human
             @@game.tick!
             @@turn = @@turn.next
-            @@turn_events = []
             sleep 0.5
           end
         end
-        @@turn_events << "#{winner.to_s} の勝利"
         update!
       end
     end

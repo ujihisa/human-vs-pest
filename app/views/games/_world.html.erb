@@ -56,8 +56,8 @@
     <h2>ゲーム</h2>
     <div>ターン <%= turn.num %></div>
     <ul>
-      <% turn_events.each do |turn_event| %>
-        <li><%= turn_event %></li>
+      <% turn.messages.each do |m| %>
+        <li><%= m %></li>
       <% end %>
     </ul>
   </div>
