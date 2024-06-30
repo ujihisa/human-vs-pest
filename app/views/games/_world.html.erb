@@ -53,6 +53,10 @@
     <h2>Debug</h2>
     <input type="submit" value="Autoplay"
            onclick="live.forward('world', {type: 'autoplay', clientX: event.clientX, clientY: event.clientY});">
+    <br><br><br><br>
+    <input type="submit" value="Reset"
+           onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
+
     <h2>ゲーム</h2>
     <div>ターン <%= turn.num %></div>
     <ul>

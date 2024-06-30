@@ -66,7 +66,7 @@ class WorldTag < Live::View
       @@autoplaying = true
       Async do
         players = [Sketch::Human, Sketch::Pest]
-        while @@turn = @@turn.next do
+        loop do
           players.each do |player|
             pa = @@game.building_actions(player).sample
             @@game.building_action!(player, pa) if pa
@@ -80,8 +80,13 @@ class WorldTag < Live::View
             update!; sleep 0.1
           end
           sleep 0.3
+
+          break if @@game.winner
+          @@turn = @@turn.next
         end
       end
+    when 'reset'
+      exit
     end
   end
 end

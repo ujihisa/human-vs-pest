@@ -296,7 +296,7 @@ module Sketch
 
     def next
       if @game.winner
-        nil
+        raise 'must not happen: The game is already finished'
       else
         @game.tick!
         Turn.new(num: @num + 1, game: @game)
@@ -490,7 +490,7 @@ module Sketch
     turn.draw
 
     players = [Human, Pest]
-    while turn = turn.next do
+    loop do
       players.each do |player|
         pa = game.building_actions(player).sample
         game.building_action!(player, pa) if pa
@@ -502,6 +502,9 @@ module Sketch
         end
       end
       turn.draw
+
+      break if game.winner
+      turn = turn.next
     end
   end
 end
