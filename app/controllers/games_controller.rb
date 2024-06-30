@@ -17,12 +17,12 @@ class WorldTag < Live::View
   def bind(page)
     super # @page = page
 
-    # Async do
-    #   while @page
-    #     update!
-    #     sleep 1
-    #   end
-    # end
+    Async do
+      while @page
+        update!
+        sleep 1
+      end
+    end
   end
 
   def render(builder)
