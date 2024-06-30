@@ -22,7 +22,7 @@ class Turn
     raise 'must not happen: The unit is not actionable' unless @actionable_units[player].include?(unit)
 
     action = @game.reason_action(player, unit, loc)
-    raise "reason_action returned nil for #{player.japanese} #{unit.loc.inspect} -> #{loc.inspect}" unless action
+    raise "reason_action returned nil for #{loc.inspect}" unless action
 
     @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが #{action} しました"
 
@@ -45,6 +45,12 @@ class Turn
     if @game.winner
       raise 'must not happen: The game is already finished'
     else
+      @actionable_units.each do |player, units|
+        units.each do |u|
+          @messages << "#{player.japanese}: #{u.loc.inspect}にいるユニットが回復しました"
+          u.hp = [u.hp + 3, 8].min
+        end
+      end
       @game.tick!
       Turn.new(num: @num + 1, game: @game)
     end

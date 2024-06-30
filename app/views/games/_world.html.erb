@@ -46,8 +46,12 @@
   <% end %>
 
   <div style="position: absolute; margin: 0px <%= 64 * game.world.size_x %>px;">
-    <h2>Human</h2>
+    <h2><%= Human.japanese %></h2>
+    <p>ユニット生産コスト: 金<%= game.cost_to_spawn_unit(Human) %></p>
     <p>Focus: <%= human_focus.to_json %></p>
+    <input type="submit"
+           value="ターン終了"
+           onclick="live.forward('world', {type: 'end_turn', clientX: event.clientX, clientY: event.clientY});">
 
     <% if human_flush %>
       <%= human_flush %>

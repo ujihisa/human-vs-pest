@@ -283,6 +283,7 @@ class GameState
       Human => 0,
       Pest => 0,
     }
+    @total_spawned_units = { Human => 1, Pest => 1 }
   end
   attr_reader :world, :moneys, :woods, :turn
 
@@ -297,10 +298,15 @@ class GameState
     end
   end
 
+  # (1), 2, 4, 8, 16, ...
+  def cost_to_spawn_unit(player)
+    2 ** @total_spawned_units[player]
+  end
+
   # returns [[Symbol, Object]]
   def building_actions(player)
     building_actions = []
-    cost = @world.unitss[player].size ** 2
+    cost = cost_to_spawn_unit(player)
 
     if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(@world.buildings.of(player, :base).loc)
       building_actions << [:spawn_unit, nil]
@@ -314,10 +320,11 @@ class GameState
     in [:remove_building, Location(x, y)]
       raise 'Not implemented yet'
     in [:spawn_unit, nil]
-      cost = @world.unitss[player].size ** 2
+      cost = cost_to_spawn_unit(player)
 
       @moneys[player] -= cost
       @world.unitss[player] << Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
+      @total_spawned_units[player] += 1
     end
   end
 
@@ -409,8 +416,6 @@ class GameState
   end
 
   def tick!
-    # TODO: 何もしなかったユニットの回復処理を書く
-
     @world.buildings.each do |_, bs|
       bs.each.with_index do |b, i|
         case b.type
@@ -436,7 +441,13 @@ class GameState
 end
 
 module AI
-  def self.unit_action_for(game, player, u, uas)
+  def self.unit_action_for(game, player, u, locs)
+    uas = locs.map {|loc| [loc, game.reason_action(player, u, loc)] }
+
+    if u.hp < 3
+      return nil
+    end
+
     # 破壊と近接攻撃は無条件で最優先
     ua = uas.find { [:destroy, :melee_attack].include?(_1[1]) }
     return ua if ua
@@ -475,8 +486,8 @@ if __FILE__ == $0
       game.building_action!(player, pa) if pa
 
       turn.actionable_units[player].each do |u|
-        uas = game.unit_actions(player, u)
-        ua = AI.unit_action_for(game, player, u, uas)
+        locs = turn.unit_actionable_locs(player, u)
+        ua = AI.unit_action_for(game, player, u, locs)
         turn.unit_action!(player, u, ua.first) if ua
       end
     end

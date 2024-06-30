@@ -57,6 +57,11 @@ class WorldTag < Live::View
     when 'rightclick'
       @@human_focus = nil
       update!
+    when 'end_turn'
+      @@human_focus = nil
+      # winner処理?
+      @@turn = @@turn.next
+      update!
     when 'autoplay'
       return if @@autoplaying
       @@autoplaying = true
@@ -69,9 +74,9 @@ class WorldTag < Live::View
             update!; sleep 0.1
 
             @@turn.actionable_units[player].each do |u|
-              uas = @@game.unit_actions(player, u)
-              ua = AI.unit_action_for(@@game, player, u, uas)
-              @@turn.unit_action!(player, u, ua) if ua
+              locs = @@turn.unit_actionable_locs(player, u)
+              ua = AI.unit_action_for(@@game, player, u, locs)
+              @@turn.unit_action!(player, u, ua.first) if ua
             end
             update!; sleep 0.1
           end
