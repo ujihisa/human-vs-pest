@@ -32,12 +32,14 @@ module Sketch
     end
   end
 
+  Building = Data.define(:type, :loc)
+
   class World
     # hexes [[Symbol]]
     # size_x Integer
     # size_y Integer
     # unitss {Human => [(Integer, Integer)], Pest => [(Integer, Integer)]}
-    # buildings {Human => {base: [(Integer, Integer)], ...}, ...}
+    # buildings {Human => [Building], ...}
     def initialize(hexes:, size_x:, size_y:, unitss:, buildings:)
       @hexes = hexes
       @size_x = size_x
@@ -85,30 +87,24 @@ module Sketch
       }
 
       buildings = {
-        Human => {
-          base: [bases[:human]],
-          fruits: [],
-          flowers: [],
-          seeds: [],
-          seeds0: [],
-        },
-        Pest => {
-          base: [bases[:pest]],
-          fruits: [],
-          flowers: [],
-          seeds: [],
-          seeds0: [],
-        },
+        Human => [Building.new(type: :base, loc: bases[:human])],
+        Pest => [Building.new(type: :base, loc: bases[:pest])],
       }
       # Returns (Player, Building)
       def buildings.at(loc)
         self.filter_map {|p, bs|
-          bs.filter_map {|b, locs|
-            if locs.include?(loc)
-              [p, b]
-            end
-          }.first
+          b = bs.find { _1.loc == loc }
+          [p, b] if b
         }.first
+      end
+      def buildings.delete_at(loc)
+        self.each do |_, bs|
+          return if bs.reject! { _1.loc == loc }
+        end
+        raise "Nothing was deleted #{loc}"
+      end
+      def buildings.of(player, type)
+        self[player].find { _1.type == type }
       end
 
       new(
@@ -200,7 +196,7 @@ module Sketch
       Array.new(@size_y) {|y|
         Array.new(@size_x) {|x|
           background = environment_table[@hexes[y][x]]
-          background ||= @buildings.at(Location.new(x, y))&.then {|p, b| building_table[p][b] }
+          background ||= @buildings.at(Location.new(x, y))&.then {|p, b| building_table[p][b.type] }
           background ||= '　'
 
           human = @unitss[Human].find { _1.loc == Location.new(x, y) }
@@ -324,9 +320,9 @@ module Sketch
 
     # Returns `nil` if the game is still ongoing
     def winner
-      if @world.buildings[Human][:base].empty?
+      if @world.buildings.of(Human, :base).nil?
         Pest
-      elsif @world.buildings[Pest][:base].empty?
+      elsif @world.buildings.of(Pest, :base).nil?
         Human
       else
         nil
@@ -338,7 +334,7 @@ module Sketch
       building_actions = []
       cost = @world.unitss[player].size ** 2
 
-      if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(@world.buildings[player][:base][0])
+      if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(@world.buildings.of(player, :base).loc)
         building_actions << [:spawn_unit, nil]
       end
 
@@ -353,7 +349,7 @@ module Sketch
         cost = @world.unitss[player].size ** 2
 
         @moneys[player] -= cost
-        @world.unitss[player] << Unit.new(loc: @world.buildings[player][:base][0], hp: 8)
+        @world.unitss[player] << Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
       end
     end
 
@@ -375,7 +371,7 @@ module Sketch
         actions << [:farming, unit.loc]
       end
 
-      if @world.buildings[player][:fruits].include?(unit.loc)
+      if @world.buildings.of(player, :fruits)&.loc == unit.loc
         actions << [:harvest_fruit, unit.loc]
       end
 
@@ -389,10 +385,9 @@ module Sketch
           }
         end
 
-      @world.buildings[player.opponent].each do |b, locs|
-        if locs.include?(unit.loc)
-          actions << [:destroy, unit.loc]
-        end
+      (p, _) = @world.buildings.at(unit.loc)
+      if p == player.opponent
+        actions << [:destroy, unit.loc]
       end
 
       actions
@@ -403,8 +398,7 @@ module Sketch
         return false
       end
 
-      buildings = @world.buildings.values.flat_map { _1.values.flatten(1) }
-      !buildings.include?(loc)
+      @world.buildings.at(loc).nil?
     end
 
     def unit_action!(player, unit, action)
@@ -415,9 +409,9 @@ module Sketch
         @woods[player] += 3
         @world.hexes[loc.y][loc.x] = nil
       in [:farming, loc]
-        @world.buildings[player][:seeds0] << loc
+        @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
       in [:harvest_fruit, loc]
-        @world.buildings[player][:fruits].delete(unit.loc)
+        @world.buildings.delete_at(loc)
         @moneys[player] += 3
       in [:melee_attack, loc]
         target_unit = @world.unitss[player.opponent].find { _1.loc == loc }
@@ -431,17 +425,24 @@ module Sketch
 
         unit.hp -= 2
       in [:destroy, loc]
-        @world.buildings[player.opponent].each do |b, locs|
-          locs.delete(loc)
-        end
+        @world.buildings.delete_at(loc)
       end
     end
 
     def tick!
       # TODO: 何もしなかったユニットの回復処理を書く
 
-      @world.buildings.each do |_, b|
-        (b[:fruits], b[:flowers], b[:seeds], b[:seeds0]) = [b[:fruits] + b[:flowers], b[:seeds], b[:seeds0], []]
+      @world.buildings.each do |_, bs|
+        bs.each.with_index do |b, i|
+          case b.type
+          when :seeds0
+            bs[i] = Building.new(type: :seeds, loc: b.loc)
+          when :seeds
+            bs[i] = Building.new(type: :flowers, loc: b.loc)
+          when :flowers
+            bs[i] = Building.new(type: :fruits, loc: b.loc)
+          end
+        end
       end
     end
 
@@ -469,7 +470,7 @@ module Sketch
       else
         # 一気に攻撃するタイミング
         ua = uas.select {|a, _| a == :move }.min_by {|_, loc|
-          distance(loc, game.world.buildings[player.opponent][:base][0])
+          distance(loc, game.world.buildings.of(player.opponent, :base).loc)
         }
         ua
       end
@@ -499,8 +500,8 @@ module Sketch
           ua = AI.unit_action_for(game, player, u, uas)
           turn.unit_action!(player, u, ua) if ua
         end
-        turn.draw
       end
+      turn.draw
     end
   end
 end
