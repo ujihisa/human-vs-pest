@@ -7,6 +7,7 @@ class WorldTag < Live::View
   @@game = @@turn.game
   @@human_focus = nil
   @@human_flush = nil
+  @@completed = { Human => false, Pest => false }
   @@autoplaying = false
 
   def initialize(...)
@@ -31,6 +32,7 @@ class WorldTag < Live::View
         game: @@game,
         human_focus: @@human_focus,
         human_flush: @@human_flush,
+        completed: @@completed,
         hexes_view: @@game.world.hexes_view,
       },
     ))
@@ -44,23 +46,64 @@ class WorldTag < Live::View
     when 'click'
       (x, y) = [event[:x], event[:y]]
       loc = Location.new(x, y)
-      if @@human_focus
+      case @@human_focus
+      when Unit
         if @@turn.unit_actionable_locs(Human, @@human_focus).include?(loc)
           @@turn.unit_action!(Human, @@human_focus, loc)
         end
         @@human_focus = nil
+      when Building
+        ba = @@game.building_actions(Human).sample
+        @@game.building_action!(Human, ba) if ba
+        @@human_focus = nil
       else
-        human = @@game.world.unitss[Human].find { _1.loc == loc }
-        @@human_focus = human if human
+        if human = @@game.world.unitss[Human].find { _1.loc == loc }
+          @@human_focus = human
+        else
+          (owner, building) = @@game.world.buildings.at(loc)
+          if owner == Human
+            @@human_focus = building
+          end
+        end
       end
       update!
     when 'rightclick'
       @@human_focus = nil
       update!
-    when 'end_turn'
-      @@human_focus = nil
-      # winner処理?
-      @@turn = @@turn.next
+    when 'complete'
+      case event[:player]
+      when 'Human'
+        player = Human
+      when 'Pest'
+        player = Pest
+      else
+        raise 'must not happen'
+      end
+
+      @@completed[player] = true
+
+      # TODO: とりあえずいまは害虫側は強制的にAI実行する
+      begin
+        player = Pest
+        pa = @@game.building_actions(player).sample
+        @@game.building_action!(player, pa) if pa
+        update!; sleep 0.1
+
+        @@turn.actionable_units[player].each do |u|
+          locs = @@turn.unit_actionable_locs(player, u)
+          ua = AI.unit_action_for(@@game, player, u, locs)
+          @@turn.unit_action!(player, u, ua.first) if ua
+        end
+        @@completed[player] = true
+        update!; sleep 0.1
+      end
+
+      if @@completed.all? { _2 }
+        @@completed = { Human => false, Pest => false }
+        @@human_focus = nil
+        @@turn = @@turn.next
+      end
+
       update!
     when 'autoplay'
       return if @@autoplaying

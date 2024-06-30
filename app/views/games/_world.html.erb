@@ -1,4 +1,10 @@
 <div style="height: 640px; width: 480px; margin: auto; border: solid 0px black">
+  <% if game.winner %>
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
+      <%= game.winner.japanese %>の勝ち
+    </div>
+  <% end %>
+
   <% game.world.hexes.each_with_index do |hexes_y, y| %>
     <% hexes_y.each_with_index do |background, x| %>
       <% loc = Location.new(x, y) %>
@@ -18,13 +24,12 @@
             </nobr>
           </div>
           <% if human_focus&.loc == loc %>
-            <font style="font-size: 32px;">
-              [🧍]
-            </font>
+            <!-- TODO: なんか枠をハイライトする感じにしたい -->
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
-              <%= human_focus.hp %>
+              [　　]
             </div>
-          <% elsif human = game.world.unitss[Human].find { loc == _1.loc } %>
+          <% end %>
+          <% if human = game.world.unitss[Human].find { loc == _1.loc } %>
             <font style="font-size: 32px;">
               🧍
             </font>
@@ -46,28 +51,36 @@
   <% end %>
 
   <div style="position: absolute; margin: 0px <%= 64 * game.world.size_x %>px;">
-    <h2><%= Human.japanese %></h2>
-    <p>ユニット生産コスト: 金<%= game.cost_to_spawn_unit(Human) %></p>
-    <p>Focus: <%= human_focus.to_json %></p>
-    <input type="submit"
-           value="ターン終了"
-           onclick="live.forward('world', {type: 'end_turn', clientX: event.clientX, clientY: event.clientY});">
+    <div>ターン <%= turn.num %></div>
 
-    <% if human_flush %>
-      <%= human_flush %>
+    <% [Human, Pest].each do |player| %>
+      <h2><%= player.japanese %></h2>
+      <p>お金: <%= game.moneys[player] %></p>
+      <p>木材: <%= game.woods[player] %> (※用途は未実装なので今は無視してOK)</p>
+      <p>ユニット生産に必要なコスト: 金<%= game.cost_to_spawn_unit(player) %> (倍々に増えていきます)</p>
+      <p>Focus: <%= human_focus.to_json %></p>
+      <input type="submit"
+             value="操作終了"
+             <%= 'disabled' if completed[player] %>
+             onclick="live.forward('world', {type: 'complete', player: '<%= player %>', clientX: event.clientX, clientY: event.clientY});">
+
+      <% if human_flush %>
+        <%= human_flush %>
+      <% end %>
     <% end %>
 
     <h2>Debug</h2>
     <input type="submit"
            value="Autoplay"
            onclick="live.forward('world', {type: 'autoplay', clientX: event.clientX, clientY: event.clientY});">
+    押しちゃダメ
     <br><br><br><br>
     <input type="submit"
            value="Reset"
            onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
+    押しちゃダメ
 
-    <h2>ゲーム</h2>
-    <div>ターン <%= turn.num %></div>
+    <h2>メッセージ</h2>
     <ul>
       <% turn.messages.each do |m| %>
         <li><%= m %></li>

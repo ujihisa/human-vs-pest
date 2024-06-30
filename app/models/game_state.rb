@@ -1,18 +1,5 @@
 # frozen_string_literal: true
 
-require_relative 'turn'
-
-# +→ x
-# ↓
-# y
-#
-# 二次元配列で表現するときは必ずy, xの順になる点に注意
-Location = Data.define(:x, :y) do
-  def inspect
-    "(#{x}, #{y})"
-  end
-end
-
 module Human
   def self.opponent
     Pest
@@ -472,6 +459,9 @@ module AI
 end
 
 if __FILE__ == $0
+  require_relative 'turn'
+  require_relative 'location'
+
   turn = Turn.new(
     num: 1,
     game: GameState.new(world: World.create(size_x: 5, size_y: 8)),
