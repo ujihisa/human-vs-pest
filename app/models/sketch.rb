@@ -4,6 +4,7 @@ module Sketch
   # +→ x
   # ↓
   # y
+  #
   # 二次元配列で表現するときは必ずy, xの順になる点に注意
   Location = Data.define(:x, :y) do
     def inspect
@@ -115,10 +116,14 @@ module Sketch
     end
 
     def hex_at(loc)
+      raise "Missing loc" unless loc
+
       @hexes[loc.y][loc.x]
     end
 
     def neighbours(loc)
+      raise "Missing loc" unless loc
+
       # hexなので現在位置に応じて非対称
       diffs =
         if loc.x.odd?
@@ -154,6 +159,8 @@ module Sketch
     end
 
     def not_passable?(loc)
+      raise "Missing loc" unless loc
+
       @hexes[loc.y][loc.x] == :pond ||
         (@unitss[Human].map(&:loc) == loc) ||
         (@unitss[Pest].map(&:loc) == loc)
@@ -255,6 +262,24 @@ module Sketch
     end
   end
 
+  class Turn
+    def initialize(num:, game:)
+      @num = num
+      @game = game
+      @actionable_units = @game.world.unitss.transform_values(&:dup).dup
+    end
+    attr_reader :num, :actionable_units
+
+    def unit_action!(player, unit, action)
+      @game.unit_action!(player, unit, action)
+      @actionable_units[player] -= [unit]
+    end
+
+    def next
+      Turn.new(num: @num + 1, game: @game)
+    end
+  end
+
   class Game
     def initialize(world:)
       @world = world
@@ -266,8 +291,6 @@ module Sketch
         Human => 0,
         Pest => 0,
       }
-
-      @turn = 0
     end
     attr_reader :world, :moneys, :woods, :turn
 
@@ -306,33 +329,26 @@ module Sketch
       end
     end
 
-    # returns [[Symbol, Object]]
+    # returns [[Symbol, Location]]
     def unit_actions(player, unit)
-      if self.winner
-        return []
-      end
+      return [] if self.winner
 
       actions = []
 
-      moves = unit.moveable(world: @world).each {|loc|
+       unit.moveable(world: @world).each {|loc|
         actions << [:move, loc]
       }
 
-      if unit.hp < 8
-        actions << [:idle, nil]
-      end
-
-
       if @world.hex_at(unit.loc) == :tree
-        actions << [:harvest_woods, nil]
+        actions << [:harvest_woods, unit.loc]
       end
 
       if vacant?(unit.loc)
-        actions << [:farming, nil]
+        actions << [:farming, unit.loc]
       end
 
       if @world.buildings[player][:fruits].include?(unit.loc)
-        actions << [:harvest_fruit, nil]
+        actions << [:harvest_fruit, unit.loc]
       end
 
       neighbours = @world.neighbours(unit.loc)
@@ -340,14 +356,14 @@ module Sketch
         if 2 < unit.hp
           @world.unitss[player.opponent].flat_map {|ounit|
             if neighbours.include?(ounit.loc)
-              actions << [:melee_attack, ounit]
+              actions << [:melee_attack, ounit.loc]
             end
           }
         end
 
       @world.buildings[player.opponent].each do |b, locs|
         if locs.include?(unit.loc)
-          actions << [:destroy, nil]
+          actions << [:destroy, unit.loc]
         end
       end
 
@@ -367,19 +383,16 @@ module Sketch
       case action
       in [:move, loc]
         unit.move!(loc)
-      in [:idle, nil]
-        unit.hp = [unit.hp + 3, 8].min
-      in [:harvest_woods, nil]
+      in [:harvest_woods, loc]
         @woods[player] += 3
-
-        # TODO: Dirty hack
-        @world.hexes[unit.loc.y][unit.loc.x] = nil
-      in [:farming, nil]
-        @world.buildings[player][:seeds0] << unit.loc
-      in [:harvest_fruit, nil]
+        @world.hexes[loc.y][loc.x] = nil
+      in [:farming, loc]
+        @world.buildings[player][:seeds0] << loc
+      in [:harvest_fruit, loc]
         @world.buildings[player][:fruits].delete(unit.loc)
         @moneys[player] += 3
-      in [:melee_attack, target_unit]
+      in [:melee_attack, loc]
+        target_unit = @world.unitss[player.opponent].find { _1.loc == loc }
         # p 'Melee attack!'
         target_unit.hp -= 4
 
@@ -389,28 +402,23 @@ module Sketch
         end
 
         unit.hp -= 2
-      in [:destroy, nil]
+      in [:destroy, loc]
         @world.buildings[player.opponent].each do |b, locs|
-          locs.each do |loc|
-            # there should be exactly one
-            if loc == unit.loc
-              locs.delete(loc)
-            end
-          end
+          locs.delete(loc)
         end
       end
     end
 
     def tick!
+      # TODO: 何もしなかったユニットの回復処理を書く
+
       @world.buildings.each do |_, b|
         (b[:fruits], b[:flowers], b[:seeds], b[:seeds0]) = [b[:fruits] + b[:flowers], b[:seeds], b[:seeds0], []]
       end
-      @turn += 1
     end
 
     def draw
       p(
-        turn: @turn,
         moneys: @moneys,
         woods: @woods,
         # num_units: @world.unitss.transform_values(&:size),
@@ -446,27 +454,32 @@ module Sketch
 
   if __FILE__ == $0
     game = Game.new(world: World.create(size_x: 5, size_y: 8))
+    turn = Turn.new(
+      num: 1,
+      game: game,
+    )
     game.draw
-
 
     player = Human
     until winner = game.winner do
       pa = game.building_actions(player).sample
       game.building_action!(player, pa) if pa
 
-      game.world.unitss[player].each do |u|
+      turn.actionable_units[player].each do |u|
         uas = game.unit_actions(player, u)
         ua = AI.unit_action_for(game, player, u, uas)
         p ua
-        game.unit_action!(player, u, ua) if ua
+        turn.unit_action!(player, u, ua) if ua
       end
+
       player = player.opponent
 
       if player == Human
         game.tick!
         game.draw
+        turn = turn.next
       end
     end
-    p "#{winner} won!"
+    p "#{game.winner} won!"
   end
 end

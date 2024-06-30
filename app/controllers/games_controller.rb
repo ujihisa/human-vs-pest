@@ -4,6 +4,7 @@ require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
   @@game = Sketch::Game.new(world: Sketch::World.create(size_x: 5, size_y: 8))
+  @@turn = Sketch::Turn.new(num: 1, game: @@game)
   @@human_focus = nil
   @@human_flush = nil
   @@turn_events = []
@@ -27,6 +28,7 @@ class WorldTag < Live::View
   def render(builder)
     builder.append(ERB.new(File.read('app/views/games/_world.html.erb')).result_with_hash(
       {
+        turn: @@turn,
         game: @@game,
         human_focus: @@human_focus,
         human_flush: @@human_flush,
@@ -43,62 +45,53 @@ class WorldTag < Live::View
     case event[:type]
     when 'click'
       (x, y) = [event[:x], event[:y]]
-      if @@human_focus&.loc == [x, y]
+      if @@human_focus&.loc == Sketch::Location.new(x, y)
         @@human_focus = nil
-      elsif human = @@game.world.unitss[Sketch::Human].find { _1.loc == [x, y] }
+      elsif human = @@game.world.unitss[Sketch::Human].find { _1.loc == Sketch::Location.new(x, y) }
         @@human_focus = human
-      elsif @@human_focus&.moveable(world: @@game.world)&.include?([x, y])
-        @@human_focus.move!([x, y])
+      elsif @@human_focus&.moveable(world: @@game.world)&.include?(Sketch::Location.new(x, y))
+        @@human_focus.move!(Sketch::Location.new(x, y))
         @@human_focus = nil
-      else
+      elsif @@human_focus
         @@human_flush = "そのマスには何もできません: #{{
           focus: @@human_focus.to_json,
-          moveable: @@human_focus&.moveable(world: @@game.world),
-          neighbours: @@game.world.neighbours(@@human_focus&.loc),
-          loc: [x, y],
+          moveable: @@human_focus.moveable(world: @@game.world),
+          neighbours: @@game.world.neighbours(@@human_focus.loc),
+          loc: Sketch::Location.new(x, y),
         }}"
+      else
+        @human_flush = 'Must not happen'
       end
       update!
     when 'autoplay'
       return if @@autoplaying
       @@autoplaying = true
       Async do
-        50.times do
-          pa = @@game.building_actions(Sketch::Human).sample
-          @@game.building_action!(Sketch::Human, pa) if pa
+        player = Sketch::Human
+        until winner = @@game.winner do
+          pa = @@game.building_actions(player).sample
+          @@game.building_action!(player, pa) if pa
           @@turn_events << pa.to_json if pa
-          update!
-          sleep 0.1
+          update!; sleep 0.1
 
-          @@game.world.unitss[Sketch::Human].each do |u|
-            uas = @@game.unit_actions(Sketch::Human, u)
-            ua = Sketch::AI.unit_action_for(@@game, Sketch::Human, u, uas)
-            @@game.unit_action!(Sketch::Human, u, ua) if ua
+          @@turn.actionable_units[player].each do |u|
+            uas = @@game.unit_actions(player, u)
+            ua = Sketch::AI.unit_action_for(@@game, player, u, uas)
+            @@turn.unit_action!(player, u, ua) if ua
             @@turn_events << ua.to_json if ua
           end
-          update!
-          sleep 0.1
+          update!; sleep 0.1
 
-          pa = @@game.building_actions(Sketch::Pest).sample
-          @@game.building_action!(Sketch::Pest, pa) if pa
-          @@turn_events << pa.to_json if pa
-          update!
-          sleep 0.1
+          player = player.opponent
 
-          @@game.world.unitss[Sketch::Pest].each do |u|
-            uas = @@game.unit_actions(Sketch::Pest, u)
-            ua = Sketch::AI.unit_action_for(@@game, Sketch::Pest, u, uas)
-            @@game.unit_action!(Sketch::Pest, u, ua) if ua
-            @@turn_events << ua.to_json if ua
+          if player == Sketch::Human
+            @@game.tick!
+            @@turn = @@turn.next
+            @@turn_events = []
+            sleep 0.5
           end
-          update!
-          sleep 0.1
-
-          @@game.tick!
-          @@turn_events = []
-          sleep 0.5
         end
-        @@turn_events << '50ターン経過したので一旦諦めます'
+        @@turn_events << "#{winner.to_s} の勝利"
         update!
       end
     end
