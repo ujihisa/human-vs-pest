@@ -36,17 +36,16 @@ class WorldTag < Live::View
           @@turn.actionable_buildings[player].each do |b|
             @@turn.building_action!(player, b) if @@game.reason_building_action(player, b)
           end
-          update!; sleep 0.1
+          sleep 1
 
           @@turn.actionable_units[player].each do |u|
             locs = @@turn.unit_actionable_locs(player, u)
             actions = @@turn.unit_actionable_actions(player, u)
             ua = AI.unit_action_for(@@game, player, u, locs, actions)
             @@turn.unit_action!(player, u, ua.first, ua.last) if ua
-          update!; sleep 0.1
           end
           @@completed[player] = true
-          update!; sleep 0.1
+          sleep 1
 
           if @@completed.all? { _2 }
             @@completed = { Human => false, Pest => false }
