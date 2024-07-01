@@ -56,12 +56,13 @@ class WorldTag < Live::View
         ba = @@game.building_actions(Human).sample
         @@game.building_action!(Human, ba) if ba
         @@human_focus = nil
-      else
-        if human = @@game.world.unitss[Human].find { _1.loc == loc }
+      else # nil
+        if human = @@turn.actionable_units[Human].find { _1.loc == loc }
           @@human_focus = human
         else
+          # TODO: 全部書き換えてOK
           (owner, building) = @@game.world.buildings.at(loc)
-          if owner == Human
+          if owner == Human && building.type == :base && @@game.moneys[Human] >= @@game.cost_to_spawn_unit(Human)
             @@human_focus = building
           end
         end

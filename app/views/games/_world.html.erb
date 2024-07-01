@@ -16,19 +16,20 @@
           onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});"
           oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
           >
-        <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+          <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
+        </div>
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+          <% if human_focus&.loc == loc %>
+            <%= ActionController::Base.helpers.image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
+          <% end %>
+        </div>
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
           <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
             <nobr>
               <%= hexes_view[y][x] %>
             </nobr>
           </div>
-          <% if human_focus&.loc == loc %>
-            <!-- TODO: なんか枠をハイライトする感じにしたい -->
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
-              [　　]
-            </div>
-          <% end %>
           <% if human = game.world.unitss[Human].find { loc == _1.loc } %>
             <font style="font-size: 32px;">
               🧍
@@ -55,7 +56,12 @@
 
     <% [Human, Pest].each do |player| %>
       <h2><%= player.japanese %></h2>
-      <p>お金: <%= game.moneys[player] %></p>
+      <p>
+        お金: <%= game.moneys[player] %>
+        <% if game.cost_to_spawn_unit(player) < game.moneys[player] %>
+          (拠点をクリックするとユニット生産のメニューが出てきます)
+        <% end %>
+      </p>
       <p>木材: <%= game.woods[player] %> (※用途は未実装なので今は無視してOK)</p>
       <p>ユニット生産に必要なコスト: 金<%= game.cost_to_spawn_unit(player) %> (倍々に増えていきます)</p>
       <p>Focus: <%= human_focus.to_json %></p>
