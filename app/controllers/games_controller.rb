@@ -40,8 +40,9 @@ class WorldTag < Live::View
 
           @@turn.actionable_units[player].each do |u|
             locs = @@turn.unit_actionable_locs(player, u)
-            ua = AI.unit_action_for(@@game, player, u, locs)
-            @@turn.unit_action!(player, u, ua.first) if ua
+            actions = @@turn.unit_actionable_actions(player, u)
+            ua = AI.unit_action_for(@@game, player, u, locs, actions)
+            @@turn.unit_action!(player, u, ua.first, ua.last) if ua
           update!; sleep 0.1
           end
           @@completed[player] = true
@@ -76,12 +77,12 @@ class WorldTag < Live::View
     pp event
     case event[:type]
     when 'click'
-      (x, y) = [event[:x], event[:y]]
-      loc = Location.new(x, y)
+      loc = Location.new(event[:x], event[:y])
       case @@human_focus
       when Unit
         if @@turn.unit_actionable_locs(Human, @@human_focus).include?(loc)
-          @@turn.unit_action!(Human, @@human_focus, loc)
+          action = @@turn.game.reason_unit_action(Human, @@human_focus, loc)
+          @@turn.unit_action!(Human, @@human_focus, loc, action)
         end
         @@human_focus = nil
       when Building
@@ -134,8 +135,9 @@ class WorldTag < Live::View
 
             @@turn.actionable_units[player].each do |u|
               locs = @@turn.unit_actionable_locs(player, u)
-              ua = AI.unit_action_for(@@game, player, u, locs)
-              @@turn.unit_action!(player, u, ua.first) if ua
+              actions = @@turn.unit_actionable_actions(player, u)
+              ua = AI.unit_action_for(@@game, player, u, locs, actions)
+              @@turn.unit_action!(player, u, ua.first, ua.last) if ua
             end
             update!; sleep 0.1
           end

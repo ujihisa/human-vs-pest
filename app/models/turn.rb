@@ -11,13 +11,39 @@ class Turn
   end
   attr_reader :num, :game, :actionable_units, :actionable_buildings, :messages
 
+  # neighbours系actionのみ
   def unit_actionable_locs(player, unit)
     return [] if @game.winner
     return [] if !@actionable_units[player].include?(unit)
 
-    locs = @game.world.reachable(unit.loc)
+    locs = @game.world.neighbours(unit.loc)
 
     locs.select {|loc| !!@game.reason_unit_action(player, unit, loc) }
+  end
+
+  # 現在位置のみ
+  def unit_actionable_actions(player, unit)
+    return [] if @game.winner
+    return [] if !@actionable_units[player].include?(unit)
+
+    actions = []
+    if @game.world.hex_at(unit.loc) == :tree
+      actions << :harvest_woods
+    else
+      (owner, b) = @game.world.buildings.at(unit.loc)
+
+      if owner == player && b.type == :fruits
+        actions << :harvest_fruit
+      elsif owner == player.opponent
+        actions << :destroy
+      end
+
+      if b.nil?
+        actions << :farming
+      end
+    end
+
+    actions
   end
 
   def building_action!(player, building)
@@ -36,12 +62,9 @@ class Turn
   end
 
 
-  def unit_action!(player, unit, loc)
+  def unit_action!(player, unit, loc, action)
     raise 'must not happen: The game is already finished' if @game.winner
     raise 'must not happen: The unit is not actionable' unless @actionable_units[player].include?(unit)
-
-    action = @game.reason_unit_action(player, unit, loc)
-    raise "reason_unit_action returned nil for #{loc.inspect}" unless action
 
     @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが #{action} しました"
 

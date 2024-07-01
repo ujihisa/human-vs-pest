@@ -46,7 +46,14 @@
         <% end %>
         <% case human_focus
            when Unit %>
-          <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
+          <% if loc == human_focus.loc and actions = turn.unit_actionable_actions(Human, human_focus) and actions.present? %>
+            <div class="hex size64">
+              <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
+            </div>
+            <div class="hex" style="font-size: 16px;">
+              <%= actions.join(', ') %>
+            </div>
+          <% elsif turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
             <div class="hex size64">
               <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>

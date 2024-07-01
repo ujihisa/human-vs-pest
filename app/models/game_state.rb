@@ -309,23 +309,6 @@ class GameState
   def reason_unit_action(player, unit, loc)
     return nil if self.winner
 
-    if unit.loc == loc
-      if @world.hex_at(unit.loc) == :tree
-        return :harvest_woods
-      end
-
-      (owner, b) = @world.buildings.at(unit.loc)
-      if owner == player && b.type == :fruits
-        return :harvest_fruit
-      elsif owner == player.opponent
-        return :destroy
-      end
-
-      if b.nil?
-        return :farming
-      end
-    end
-
     if 2 < unit.hp
       if @world.unitss[player.opponent].find { loc == _1.loc }
         return :melee_attack
@@ -337,20 +320,6 @@ class GameState
     end
 
     nil
-  end
-
-  # returns [[Location, Symbol]]
-  def unit_actions(player, unit)
-    return [] if self.winner
-
-    locs = world.reachable(unit.loc)
-
-    locs.filter_map {|loc|
-      action = reason_unit_action(player, unit, loc)
-      if action
-        [loc, action]
-      end
-    }
   end
 
   private def vacant?(loc)
@@ -388,8 +357,9 @@ end
 
 module AI
   # [Location, Symbol] | nil
-  def self.unit_action_for(game, player, u, locs)
+  def self.unit_action_for(game, player, u, locs, actions)
     uas = locs.map {|loc| [loc, game.reason_unit_action(player, u, loc)] }
+    uas += actions.map { [u.loc, _1] }
 
     # セルフケア最優先
     if u.hp < 3
@@ -449,8 +419,9 @@ if __FILE__ == $0
 
       turn.actionable_units[player].each do |u|
         locs = turn.unit_actionable_locs(player, u)
-        ua = AI.unit_action_for(game, player, u, locs)
-        turn.unit_action!(player, u, ua.first) if ua
+        actions = turn.unit_actionable_actions(player, u)
+        ua = AI.unit_action_for(game, player, u, locs, actions)
+        turn.unit_action!(player, u, ua.first, ua.last) if ua
       end
     end
     turn.draw
