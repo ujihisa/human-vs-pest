@@ -178,7 +178,7 @@ class World
         seeds0: '🌱',
       },
       Pest => {
-        base: '🪺',
+        base: '🕳',
         fruits: '🍄',
         flowers: '🦠',
         seeds: '🧬',
