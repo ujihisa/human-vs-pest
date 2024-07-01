@@ -87,7 +87,7 @@
       <p>Focus: <%= human_focus.to_json %></p>
       <input type="submit"
              value="操作終了"
-             <%= 'disabled' if completed[player] %>
+             <%= 'disabled' if completed[player] || game.winner %>
              onclick="live.forward('world', {type: 'complete', player: '<%= player %>', clientX: event.clientX, clientY: event.clientY});">
 
       <% if human_flush %>
@@ -97,8 +97,8 @@
 
     <h2>Debug</h2>
     <input type="submit"
-           value="Autoplay"
-           onclick="live.forward('world', {type: 'autoplay', clientX: event.clientX, clientY: event.clientY});">
+           value="Autoplay all"
+           onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY});">
     押しちゃダメ
     <br><br><br><br>
     <input type="submit"

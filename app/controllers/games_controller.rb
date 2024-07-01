@@ -9,6 +9,7 @@ class WorldTag < Live::View
   @@human_flush = nil
   @@completed = { Human => false, Pest => false }
   @@autoplaying = false
+  @@pest_ai_stared = false
 
   def initialize(...)
     super(...)
@@ -21,6 +22,37 @@ class WorldTag < Live::View
       while @page
         update!
         sleep 1
+      end
+    end
+
+    # TODO: とりあえずいまは害虫側は強制的にAI実行する
+    if !@@pest_ai_stared
+      @@pest_ai_stared = true
+      Async do
+        until @@game.winner do
+          sleep 2
+
+          player = Pest
+          @@turn.actionable_buildings[player].each do |b|
+            @@turn.building_action!(player, b) if @@game.reason_building_action(player, b)
+          end
+          update!; sleep 0.1
+
+          @@turn.actionable_units[player].each do |u|
+            locs = @@turn.unit_actionable_locs(player, u)
+            ua = AI.unit_action_for(@@game, player, u, locs)
+            @@turn.unit_action!(player, u, ua.first) if ua
+          update!; sleep 0.1
+          end
+          @@completed[player] = true
+          update!; sleep 0.1
+
+          if @@completed.all? { _2 }
+            @@completed = { Human => false, Pest => false }
+            @@human_focus = nil
+            @@turn = @@turn.next
+          end
+        end
       end
     end
   end
@@ -81,23 +113,6 @@ class WorldTag < Live::View
 
       @@completed[player] = true
 
-      # TODO: とりあえずいまは害虫側は強制的にAI実行する
-      begin
-        player = Pest
-        @@turn.actionable_buildings[player].each do |b|
-          @@turn.building_action!(player, b) if @@game.reason_building_action(player, b)
-        end
-        update!; sleep 0.1
-
-        @@turn.actionable_units[player].each do |u|
-          locs = @@turn.unit_actionable_locs(player, u)
-          ua = AI.unit_action_for(@@game, player, u, locs)
-          @@turn.unit_action!(player, u, ua.first) if ua
-        end
-        @@completed[player] = true
-        update!; sleep 0.1
-      end
-
       if @@completed.all? { _2 }
         @@completed = { Human => false, Pest => false }
         @@human_focus = nil
@@ -105,7 +120,7 @@ class WorldTag < Live::View
       end
 
       update!
-    when 'autoplay'
+    when 'autoplay_all'
       return if @@autoplaying
       @@autoplaying = true
       Async do
