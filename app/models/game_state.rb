@@ -428,27 +428,30 @@ class GameState
 end
 
 module AI
+  # [Location, Symbol] | nil
   def self.unit_action_for(game, player, u, locs)
     uas = locs.map {|loc| [loc, game.reason_action(player, u, loc)] }
 
+    # セルフケア最優先
     if u.hp < 3
       return nil
     end
 
-    # 破壊と近接攻撃は無条件で最優先
-    ua = uas.find { [:destroy, :melee_attack].include?(_1[1]) }
-    return ua if ua
+    # 次いで破壊と近接攻撃
+    if ua = uas.find { [:destroy, :melee_attack].include?(_1[1]) }
+      return ua
+    end
 
-    if game.world.unitss[player].size < 3
-      # 成長を狙うタイミング
-      ua = uas.select {|_, a| a != :move }.sample
-      ua ||= uas.sample
-      ua
-    else
-      # 一気に攻撃するタイミング
+    # 相手より人数が多ければrage mode
+    if game.world.unitss[player.opponent].size < game.world.unitss[player].size
       ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
         distance(loc, game.world.buildings.of(player.opponent, :base).loc)
       }
+      ua
+    else
+      # じわじわ成長を狙う
+      ua = uas.select {|_, a| a != :move }.sample
+      ua ||= uas.sample
       ua
     end
   end
