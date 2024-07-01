@@ -6,27 +6,69 @@ class Turn
     @game = game
 
     @actionable_units = @game.world.unitss.transform_values(&:dup).dup
+    @actionable_buildings = @game.world.buildings.transform_values(&:dup).dup
     @messages = []
   end
-  attr_reader :num, :game, :actionable_units, :messages
+  attr_reader :num, :game, :actionable_units, :actionable_buildings, :messages
 
   def unit_actionable_locs(player, unit)
     return [] if @game.winner
     return [] if !@actionable_units[player].include?(unit)
 
-    @game.unit_actions(player, unit).map(&:first)
+    locs = @game.world.reachable(unit.loc)
+
+    locs.select {|loc| !!@game.reason_unit_action(player, unit, loc) }
   end
+
+  def building_action!(player, building)
+    case building.type
+    when :base
+      cost = @game.cost_to_spawn_unit(player)
+
+      @game.moneys[player] -= cost
+      new_unit = Unit.new(loc: @game.world.buildings.of(player, :base).loc, hp: 8)
+      @game.world.unitss[player] << new_unit
+      @game.total_spawned_units[player] += 1
+
+      @actionable_units[player] += [new_unit]
+    end
+    @actionable_buildings[player] -= [building]
+  end
+
 
   def unit_action!(player, unit, loc)
     raise 'must not happen: The game is already finished' if @game.winner
     raise 'must not happen: The unit is not actionable' unless @actionable_units[player].include?(unit)
 
-    action = @game.reason_action(player, unit, loc)
-    raise "reason_action returned nil for #{loc.inspect}" unless action
+    action = @game.reason_unit_action(player, unit, loc)
+    raise "reason_unit_action returned nil for #{loc.inspect}" unless action
 
     @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが #{action} しました"
 
-    @game.do_unit_action!(player, unit, [loc, action])
+    case action
+    when :move
+      unit.move!(loc)
+    when :harvest_woods
+      @game.woods[player] += 3
+      @game.world.hexes[loc.y][loc.x] = nil
+    when :farming
+      @game.world.buildings[player] << Building.new(type: :seeds0, loc: loc)
+    when :harvest_fruit
+      @game.world.buildings.delete_at(loc)
+      @game.moneys[player] += 3
+    when :melee_attack
+      target_unit = @game.world.unitss[player.opponent].find { _1.loc == loc }
+      target_unit.hp -= 4
+
+      if target_unit.dead?
+        @game.world.unitss[player.opponent].delete(target_unit)
+      end
+
+      unit.hp -= 2
+    when :destroy
+      @game.world.buildings.delete_at(loc)
+    end
+
     @actionable_units[player] -= [unit]
 
     if @game.winner
@@ -56,4 +98,3 @@ class Turn
     end
   end
 end
-

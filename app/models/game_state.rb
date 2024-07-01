@@ -272,7 +272,7 @@ class GameState
     }
     @total_spawned_units = { Human => 1, Pest => 1 }
   end
-  attr_reader :world, :moneys, :woods, :turn
+  attr_reader :world, :moneys, :woods, :turn, :total_spawned_units
 
   # Returns `nil` if the game is still ongoing
   def winner
@@ -290,33 +290,23 @@ class GameState
     2 ** @total_spawned_units[player]
   end
 
-  # returns [[Symbol, Object]]
-  def building_actions(player)
-    building_actions = []
-    cost = cost_to_spawn_unit(player)
+  # returns nil | String
+  def reason_building_action(player, building)
+    return nil if self.winner
 
-    if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(@world.buildings.of(player, :base).loc)
-      building_actions << [:spawn_unit, nil]
-    end
-
-    building_actions
-  end
-
-  def building_action!(player, action)
-    case action
-    in [:remove_building, Location(x, y)]
-      raise 'Not implemented yet'
-    in [:spawn_unit, nil]
+    case building.type
+    when :base
       cost = cost_to_spawn_unit(player)
-
-      @moneys[player] -= cost
-      @world.unitss[player] << Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
-      @total_spawned_units[player] += 1
+      if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(building.loc)
+        'ユニット生産'
+      end
+    else
+      false
     end
   end
 
   # nil | Symbol
-  def reason_action(player, unit, loc)
+  def reason_unit_action(player, unit, loc)
     return nil if self.winner
 
     if unit.loc == loc
@@ -349,7 +339,6 @@ class GameState
     nil
   end
 
-
   # returns [[Location, Symbol]]
   def unit_actions(player, unit)
     return [] if self.winner
@@ -357,7 +346,7 @@ class GameState
     locs = world.reachable(unit.loc)
 
     locs.filter_map {|loc|
-      action = reason_action(player, unit, loc)
+      action = reason_unit_action(player, unit, loc)
       if action
         [loc, action]
       end
@@ -370,36 +359,6 @@ class GameState
     end
 
     @world.buildings.at(loc).nil?
-  end
-
-  def do_unit_action!(player, unit, loc_w_action)
-    (loc, action) = loc_w_action
-
-    case action
-    when :move
-      unit.move!(loc)
-    when :harvest_woods
-      @woods[player] += 3
-      @world.hexes[loc.y][loc.x] = nil
-    when :farming
-      @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
-    when :harvest_fruit
-      @world.buildings.delete_at(loc)
-      @moneys[player] += 3
-    when :melee_attack
-      target_unit = @world.unitss[player.opponent].find { _1.loc == loc }
-      # p 'Melee attack!'
-      target_unit.hp -= 4
-
-      if target_unit.dead?
-        # p 'Killed!'
-        @world.unitss[player.opponent].delete(target_unit)
-      end
-
-      unit.hp -= 2
-    when :destroy
-      @world.buildings.delete_at(loc)
-    end
   end
 
   def tick!
@@ -430,7 +389,7 @@ end
 module AI
   # [Location, Symbol] | nil
   def self.unit_action_for(game, player, u, locs)
-    uas = locs.map {|loc| [loc, game.reason_action(player, u, loc)] }
+    uas = locs.map {|loc| [loc, game.reason_unit_action(player, u, loc)] }
 
     # セルフケア最優先
     if u.hp < 3
@@ -440,6 +399,15 @@ module AI
     # 次いで破壊と近接攻撃
     if ua = uas.find { [:destroy, :melee_attack].include?(_1[1]) }
       return ua
+    end
+
+    # 相手が自拠点に近づいてきていれば戻る
+    min_dist = game.world.unitss[player.opponent].map {|u| distance(u.loc, game.world.buildings.of(player, :base).loc) }.min
+    if min_dist && min_dist < 4
+      ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
+        distance(loc, game.world.buildings.of(player, :base).loc)
+      }
+      return ua if ua
     end
 
     # 相手より人数が多ければrage mode
@@ -475,8 +443,9 @@ if __FILE__ == $0
   players = [Human, Pest]
   loop do
     players.each do |player|
-      pa = game.building_actions(player).sample
-      game.building_action!(player, pa) if pa
+      turn.actionable_buildings[player].each do |b|
+        turn.building_action!(player, b) if game.reason_building_action(player, b)
+      end
 
       turn.actionable_units[player].each do |u|
         locs = turn.unit_actionable_locs(player, u)

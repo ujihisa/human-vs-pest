@@ -16,37 +16,57 @@
           onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});"
           oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
           >
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+        <div class="hex size64">
           <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
         </div>
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
+        <div class="hex size64">
           <% if human_focus&.loc == loc %>
             <%= ActionController::Base.helpers.image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
           <% end %>
         </div>
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
-          <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);">
-            <nobr>
-              <%= hexes_view[y][x] %>
-            </nobr>
+        <div class="hex">
+          <nobr>
+            <%= hexes_view[y][x] %>
+          </nobr>
+        </div>
+        <% if turn.actionable_units[Human].find { _1.loc == loc } or
+            turn.actionable_buildings[Human].find { game.reason_building_action(Human, _1) && _1.loc == loc }
+          %>
+          <div class="hex size64">
+            *
           </div>
-          <% if human = game.world.unitss[Human].find { loc == _1.loc } %>
-            <font style="font-size: 32px;">
-              🧍
-            </font>
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 16px;">
-              <%= human.hp %>
+        <% end %>
+        <% if human = game.world.unitss[Human].find { loc == _1.loc } %>
+          <div class="hex" style="font-size: 32px;">
+            🧍
+          </div>
+          <div class="hex" style="font-size: 16px">
+            <%= human.hp %>
+          </div>
+        <% end %>
+        <% case human_focus
+           when Unit %>
+          <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
+            <div class="hex size64">
+              <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
+            </div>
+            <div class="hex" style="font-size: 16px;">
+              <%= game.reason_unit_action(Human, human_focus, loc) %>
             </div>
           <% end %>
-          <% if human_focus && turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
-            <%= game.reason_action(Human, human_focus, loc) %>
+        <% when Building %>
+          <% if human_focus.loc == loc && r = game.reason_building_action(Human, human_focus) %>
+            <div class="hex" style="font-size: 32px;">
+              <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
+            </div>
+            <%= r %>
           <% end %>
-          <!--
-            <nobr>
-            <%= [x, y] %>
-            </nobr>
-          -->
-        </div>
+        <% end %>
+        <!--
+          <nobr>
+          <%= [x, y] %>
+          </nobr>
+        -->
       </div>
     <% end %>
   <% end %>
