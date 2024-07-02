@@ -136,11 +136,21 @@ class World
   end
 
   # [[String]]
-  def hexes_view
+  def hexes_view(exclude_background:)
     Array.new(@size_y) {|y|
       Array.new(@size_x) {|x|
-        background = @buildings.at(Location.new(x, y))&.then {|b| b.view }
-        background ||= '　'
+        loc = Location.new(x, y)
+        b = @buildings.at(loc)
+        background =
+          if b
+            if exclude_background && b.background_img
+              '　'
+            else
+              b.view
+            end
+          else
+            '　'
+          end
 
         human = @unitss[Human].find { _1.loc == Location.new(x, y) }
         pest = @unitss[Pest].find { _1.loc == Location.new(x, y) }
@@ -161,7 +171,7 @@ class World
   end
 
   def draw
-    hexes_view = hexes_view()
+    hexes_view = hexes_view(exclude_background: false)
 
     (0...@size_y).each do |y|
       print '|'

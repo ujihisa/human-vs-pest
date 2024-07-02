@@ -6,10 +6,11 @@
     </div>
   <% end %>
 
-  <% game.world.hexes_view.each_with_index do |hexes_y, y| %>
+  <% hexes_view.each_with_index do |hexes_y, y| %>
     <% hexes_y.each_with_index do |_, x| %>
       <% loc = Location.new(x, y) %>
-      <% background = 'nil'  %>
+      <% building = game.world.buildings.at(loc) %>
+      <% background_img = building&.background_img %>
       <% padding_top = x.even? ? 64*y : 64*y + 32 %>
       <% padding_left = 48*x %>
       <div
@@ -18,7 +19,7 @@
           oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
           >
         <div class="hex size64">
-          <%= ActionController::Base.helpers.image_tag("backgrounds/#{background}.png", style: 'height: 64px; width: 64px;') %>
+          <%= ActionController::Base.helpers.image_tag(background_img || 'backgrounds/nil.png', style: 'height: 64px; width: 64px;') %>
         </div>
         <div class="hex size64">
           <% if human_focus&.loc == loc %>
@@ -38,8 +39,7 @@
             <%= human.hp %>
           </div>
         <% end %>
-        <% case human_focus
-           when Unit %>
+        <% if human_focus  %>
           <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
             <div class="hex size64">
               <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
@@ -47,13 +47,6 @@
             <div class="hex" style="font-size: 16px;">
               <%= game.reason_unit_action(Human, human_focus, loc) %>
             </div>
-          <% end %>
-        <% when Building %>
-          <% if human_focus.loc == loc && r = game.reason_building_action(Human, human_focus) %>
-            <div class="hex" style="font-size: 32px;">
-              <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
-            </div>
-            <%= r %>
           <% end %>
         <% end %>
 

@@ -46,4 +46,9 @@ Building = Data.define(:player, :id, :loc, :hp) do
     }
     building_table[self.player][self.id]
   end
+
+  def background_img
+    path = "backgrounds/#{id}.png"
+    File.exist?("app/assets/images/#{path}") ? path : nil
+  end
 end

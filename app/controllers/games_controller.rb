@@ -37,12 +37,6 @@ class WorldTag < Live::View
           end
           sleep 1
 
-          # TODO: この4行は消して! debug code!
-          if @@turn.actionable_units[player].nil?
-            pp @@turn.actionable_units
-            pp player
-          end
-
           @@turn.actionable_units[player].each do |u|
             locs = @@turn.unit_actionable_locs(player, u)
             ua = AI.unit_action_for(@@game, player, u, locs)
@@ -69,7 +63,7 @@ class WorldTag < Live::View
         human_focus: @@human_focus,
         human_flush: @@human_flush,
         completed: @@completed,
-        hexes_view: @@game.world.hexes_view,
+        hexes_view: @@game.world.hexes_view(exclude_background: true),
         menu_action: @@menu_action,
       },
     ))
@@ -83,18 +77,13 @@ class WorldTag < Live::View
     case event[:type]
     when 'click'
       loc = Location.new(event[:x], event[:y])
-      case @@human_focus
-      when Unit
+      if @@human_focus
         if @@turn.unit_actionable_locs(Human, @@human_focus).include?(loc)
           action = @@turn.game.reason_unit_action(Human, @@human_focus, loc)
           @@turn.unit_action!(Human, @@human_focus, loc, action)
         end
         @@human_focus = nil
-      when Building
-        # b = @@turn.actionable_buildings[Human].find { _1.loc == loc }
-        # @@turn.building_action!(Human, b) if @@game.reason_building_action(Human, b)
-        # @@human_focus = nil
-      else # nil
+      else
         if @@menu_action
           locs = @@turn.menu_actionable_actions(player)[@@menu_action.id]
           if locs && locs.include?(loc)
