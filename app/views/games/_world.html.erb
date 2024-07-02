@@ -79,45 +79,77 @@
   <% end %>
 
   <div style="position: absolute; margin: 0px <%= 64 * game.world.size_x %>px;">
-    <div>ターン <%= turn.num %></div>
+    <div class="container">
+      ターン <%= turn.num %>
+    </div>
 
     <% [Human, Pest].each do |player| %>
-      <h2><%= player.japanese %></h2>
-      <p>
-        お金: <%= game.moneys[player] %>
-        <% if game.cost_to_spawn_unit(player) < game.moneys[player] %>
-          (拠点をクリックするとユニット生産のメニューが出てきます)
-        <% end %>
-      </p>
-      <p>木材: <%= game.woods[player] %> (※用途は未実装なので今は無視してOK)</p>
-      <p>ユニット生産に必要なコスト: 金<%= game.cost_to_spawn_unit(player) %> (倍々に増えていきます)</p>
-      <p>Focus: <%= human_focus.to_json %></p>
-      <input type="submit"
-             value="操作終了"
-             <%= 'disabled' if completed[player] || game.winner %>
-             onclick="live.forward('world', {type: 'complete', player: '<%= player %>', clientX: event.clientX, clientY: event.clientY});">
+      <div class="container">
+        <h5><%= player.japanese %></h5>
+        <ul class="list-group">
+          <li class="list-group-item">
+            お金: <%= game.moneys[player] %>
+            <% if game.cost_to_spawn_unit(player) < game.moneys[player] %>
+              (拠点をクリックするとユニット生産のメニューが出てきます)
+            <% end %>
+          </li>
+          <li class="list-group-item">
+            木材: <%= game.woods[player] %> (※用途は未実装なので今は無視してOK)
+          </li>
+          <li class="list-group-item">
+            <button
+                class="btn btn-secondary"
+                <%= 'disabled' if game.cost_to_spawn_unit(player) > game.moneys[player] || completed[player] || game.winner %>
+                type="submit">
+              農業
+            </button>
+          </li>
+          <li class="list-group-item">
+            <button
+                class="btn btn-secondary"
+                <%= 'disabled' if game.cost_to_spawn_unit(player) > game.moneys[player] || completed[player] || game.winner %>
+                type="submit">
+              ユニット生産
+            </button>
+            コスト: お金<%= game.cost_to_spawn_unit(player) %> (倍々に増えていきます)
+          </li>
+          <li class="list-group-item">
+            <div class="d-grid gap-2 col-6 mx-auto">
+              <button
+                  class="btn btn-secondary"
+                  <%= 'disabled' if completed[player] || game.winner %>
+                  onclick="window.event = event; live.forward('world', {type: 'complete', player: '<%= player.name %>', clientX: event.clientX, clientY: event.clientY});">
+                操作終了
+              </button>
+            </div>
+          </li>
+        </ul>
 
-      <% if human_flush %>
-        <%= human_flush %>
-      <% end %>
+        <% if human_flush %>
+          <%= human_flush %>
+        <% end %>
+      </div>
     <% end %>
 
-    <h2>Debug</h2>
-    <input type="submit"
-           value="Autoplay all"
-           onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY});">
-    押しちゃダメ
-    <br><br><br><br>
-    <input type="submit"
-           value="Reset"
-           onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
-    押しちゃダメ
+    <div class="container">
+      <h5>Debug</h5>
+      <input class="btn btn-secondary" type="submit"
+             value="Autoplay all (押しちゃダメ)"
+             onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY});">
+      <input class="btn btn-secondary" type="submit"
+             value="Reset (押しちゃダメ)"
+             onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
 
-    <h2>メッセージ</h2>
-    <ul>
-      <% turn.messages.each do |m| %>
-        <li><%= m %></li>
-      <% end %>
-    </ul>
+    </div>
+    <div class="container">
+      <h5>メッセージ</h5>
+      <ul class="list-group">
+        <% turn.messages.each do |m| %>
+          <li class="list-group-item">
+            <%= m %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
   </div>
 </div>

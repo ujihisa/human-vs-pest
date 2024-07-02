@@ -108,10 +108,11 @@ class WorldTag < Live::View
       when 'Pest'
         player = Pest
       else
-        raise 'must not happen'
+        raise "Must not happen: Unknown player: #{event[:player]}"
       end
 
       @@completed[player] = true
+      update!
 
       if @@completed.all? { _2 }
         @@completed = { Human => false, Pest => false }

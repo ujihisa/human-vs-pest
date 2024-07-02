@@ -1,26 +1,30 @@
 # frozen_string_literal: true
 
-module Human
-  def self.opponent
-    Pest
-  end
+Player = Struct.new(:name, :japanese, :opponent) do
+  alias inspect name
+end
+Human = Player.new('Human', '人間', nil)
+Pest = Player.new('Pest', '害虫', Human)
+Human.opponent = Pest
 
-  def self.japanese
-    '人間'
+Building = Data.define(:type, :loc, :hp) do
+  def initialize(type:, loc:)
+    hp =
+      case type
+      when :base, :seeds0, :seeds, :flowers, :fruits, :mine, :trail
+        nil
+      when :tree # 未実装
+        3
+      when :rock # 未実装
+        3
+      when :barricade # 未実装
+        3
+      else
+        raise "Unknown Building type: #{type}"
+      end
+    super(type:, loc:, hp: hp)
   end
 end
-
-module Pest
-  def self.opponent
-    Human
-  end
-
-  def self.japanese
-    '害虫'
-  end
-end
-
-Building = Data.define(:type, :loc)
 
 class World
   # hexes [[Symbol]]
@@ -367,7 +371,7 @@ module AI
     end
 
     # 次いで破壊と近接攻撃
-    if ua = uas.find { [:destroy, :melee_attack].include?(_1[1]) }
+    if ua = uas.find { [:melee_attack].include?(_1[1]) }
       return ua
     end
 

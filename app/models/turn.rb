@@ -32,12 +32,6 @@ class Turn
     else
       (owner, b) = @game.world.buildings.at(unit.loc)
 
-      if owner == player && b.type == :fruits
-        actions << :harvest_fruit
-      elsif owner == player.opponent
-        actions << :destroy
-      end
-
       if b.nil?
         actions << :farming
       end
@@ -71,14 +65,25 @@ class Turn
     case action
     when :move
       unit.move!(loc)
+
+      # ついでに収穫 / 略奪
+      opponent = player.opponent
+      case @game.world.buildings.at(loc)
+      in [^player, Building(type: :fruits)]
+        @messages << "#{player.japanese}: ついでにそのまま収穫しました"
+        @game.world.buildings.delete_at(loc)
+        @game.moneys[player] += 3
+      in [^(player.opponent), b]
+        @messages << "#{player.japanese}: ついでにそのまま#{b.type}を略奪しました"
+        @game.world.buildings.delete_at(loc)
+      else
+        # do nothing
+      end
     when :harvest_woods
       @game.woods[player] += 3
       @game.world.hexes[loc.y][loc.x] = nil
     when :farming
       @game.world.buildings[player] << Building.new(type: :seeds0, loc: loc)
-    when :harvest_fruit
-      @game.world.buildings.delete_at(loc)
-      @game.moneys[player] += 3
     when :melee_attack
       target_unit = @game.world.unitss[player.opponent].find { _1.loc == loc }
       target_unit.hp -= 4
@@ -88,8 +93,6 @@ class Turn
       end
 
       unit.hp -= 2
-    when :destroy
-      @game.world.buildings.delete_at(loc)
     end
 
     @actionable_units[player] -= [unit]
