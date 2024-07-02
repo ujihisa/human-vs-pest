@@ -13,19 +13,17 @@ Pest = Data.define(:name, :japanese) {
 }.new('Pest', '害虫')
 
 class World
-  # hexes [[Symbol]]
   # size_x Integer
   # size_y Integer
   # unitss {Human => [(Integer, Integer)], Pest => [(Integer, Integer)]}
   # buildings {Human => [Building], ...}
-  def initialize(hexes:, size_x:, size_y:, unitss:, buildings:)
-    @hexes = hexes
+  def initialize(size_x:, size_y:, unitss:, buildings:)
     @size_x = size_x
     @size_y = size_y
     @unitss = unitss
     @buildings = buildings
   end
-  attr_reader :hexes, :size_x, :size_y, :unitss, :buildings
+  attr_reader :size_x, :size_y, :unitss, :buildings
 
   def self.create(size_x:, size_y:)
     bases = {
@@ -33,7 +31,7 @@ class World
       pest: Location.new(size_x / 2, size_y - 1),
     }
 
-    trees = Array.new(size_x * size_y / 10) {
+    trees = Array.new(size_x * size_y / 5) {
       10.times.find {
         loc = Location.new(rand(size_x), rand(size_y))
         if loc != bases[:human] && loc != bases[:pest]
@@ -42,7 +40,7 @@ class World
       } or raise 'Could not find a suitable tree location'
     }
 
-    ponds = Array.new(size_x * size_y / 20) {
+    ponds = Array.new(size_x * size_y / 10) {
       10.times.find {
         loc = Location.new(rand(size_x), rand(size_y))
         if loc != bases[:human] && loc != bases[:pest] && !trees.include?(loc)
@@ -51,22 +49,15 @@ class World
       } or raise 'Could not find a suitable pond location'
     }
 
-    hexes = Array.new(size_y) {|y|
-      Array.new(size_x) {|x|
-        case Location.new(x, y)
-        when *trees
-          :tree
-        when *ponds
-          :pond
-        else
-          nil
-        end
-      }
-    }
-
     buildings = {
-      Human => [Building.new(id: :base, loc: bases[:human])],
+      Human => [
+        Building.new(id: :base, loc: bases[:human]),
+      ],
       Pest => [Building.new(id: :base, loc: bases[:pest])],
+      :world => [
+        *trees.map { Building.new(id: :tree, loc: _1) },
+        *ponds.map { Building.new(id: :pond, loc: _1) },
+      ]
     }
     # Returns (Player, Building)
     def buildings.at(loc)
@@ -86,21 +77,14 @@ class World
     end
 
     new(
-      hexes: hexes,
       size_x: size_x,
       size_y: size_y,
       unitss: {
-        Human => [Unit.new(loc: bases[:human], hp: 8)],
-        Pest => [Unit.new(loc: bases[:pest], hp: 8)],
+        Human => [Unit.new(player: Human, loc: bases[:human], hp: 8)],
+        Pest => [Unit.new(player: Human, loc: bases[:pest], hp: 8)],
       },
       buildings: buildings,
     )
-  end
-
-  def hex_at(loc)
-    raise "Missing loc" unless loc
-
-    @hexes[loc.y][loc.x]
   end
 
   def neighbours(loc)
@@ -140,25 +124,23 @@ class World
     }
   end
 
-  def not_passable?(loc)
+  def not_passable?(player, loc)
+    raise "Missing player" unless player
     raise "Missing loc" unless loc
 
-    @hexes[loc.y][loc.x] == :pond ||
-      (@unitss[Human].map(&:loc) == loc) ||
-      (@unitss[Pest].map(&:loc) == loc)
+    (owner, b) = @buildings.at(loc)
+    if owner && player != owner && !b.passable?
+      return true
+    end
+
+    @unitss[Human].find { _1.loc == loc } || @unitss[Pest].find { _1.loc == loc }
   end
 
   # [[String]]
   def hexes_view
-    environment_table = {
-      pond: '🌊',
-      tree: '🌲',
-    }
-
     Array.new(@size_y) {|y|
       Array.new(@size_x) {|x|
-        background = environment_table[@hexes[y][x]]
-        background ||= @buildings.at(Location.new(x, y))&.then {|p, b| b.view(p) }
+        background = @buildings.at(Location.new(x, y))&.then {|p, b| b.view(p) }
         background ||= '　'
 
         human = @unitss[Human].find { _1.loc == Location.new(x, y) }
@@ -204,7 +186,8 @@ class World
 end
 
 class Unit
-  def initialize(loc:, hp:)
+  def initialize(player:, loc:, hp:)
+    @player = player
     @loc = loc
     @hp = hp
   end
@@ -214,7 +197,7 @@ class Unit
   # returns [(Integer, Integer)]
   def moveable(world:)
     world.neighbours(@loc).select {|loc|
-      !world.not_passable?(loc) &&
+      !world.not_passable?(@player, loc) &&
         !world.unitss.values.flatten(1).any? { _1.loc == loc }
     }
   end
@@ -306,14 +289,18 @@ class GameState
       return :move
     end
 
+    (owner, b) = @world.buildings.at(loc)
+    if owner
+      case b.id
+      when :tree
+        return :harvest_woods
+      end
+    end
+
     nil
   end
 
   private def vacant?(loc)
-    if @world.hex_at(loc)
-      return false
-    end
-
     @world.buildings.at(loc).nil?
   end
 

@@ -6,10 +6,10 @@
     </div>
   <% end %>
 
-  <% game.world.hexes.each_with_index do |hexes_y, y| %>
-    <% hexes_y.each_with_index do |background, x| %>
+  <% game.world.hexes_view.each_with_index do |hexes_y, y| %>
+    <% hexes_y.each_with_index do |_, x| %>
       <% loc = Location.new(x, y) %>
-      <% background = 'nil' if background.nil? %>
+      <% background = 'nil'  %>
       <% padding_top = x.even? ? 64*y : 64*y + 32 %>
       <% padding_left = 48*x %>
       <div

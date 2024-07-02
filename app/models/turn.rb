@@ -25,9 +25,9 @@ class Turn
   MENU_ACTIONS = {
     #                 :japanese          :cost          :location_type
     farming:         ['農業',            { seed: 1 },   :unit],
-    build_trail:     ['建設/小道',       { wood: 1 },   :unit],
-    build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
-    build_landmine:  ['建設/地雷',       { ore: 3 },    :unit],
+    # build_trail:     ['建設/小道',       { wood: 1 },   :unit],
+    # build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
+    # build_landmine:  ['建設/地雷',       { ore: 3 },    :unit],
     spawn_unit:      ['ユニット生産',    { money: :f }, :base],
   }.to_h {|id, (a, b, c)| [id, MenuAction.new(id: id, japanese: a, cost: b, location_type: c)] }
   def MENU_ACTIONS.at(game, player)
@@ -79,7 +79,7 @@ class Turn
     when :farming
       @game.world.buildings[player] << Building.new(id: :seeds0, loc: loc)
     when :spawn_unit
-      new_unit = Unit.new(loc: @game.world.buildings.of(player, :base).loc, hp: 8)
+      new_unit = Unit.new(player: player, loc: @game.world.buildings.of(player, :base).loc, hp: 8)
       @game.world.unitss[player] << new_unit
       @game.total_spawned_units[player] += 1
       @actionable_units[player] += [new_unit]
@@ -118,8 +118,10 @@ class Turn
       unit.move!(loc)
       unit_passive_action!(player, unit)
     when :harvest_woods
-      @game.resources[player][:wood] = @game.resources[player][:wood].add_amount(3)
-      @game.world.hexes[loc.y][loc.x] = nil
+      @game.resources[player][:wood] = @game.resources[player][:wood].add_amount(1)
+
+      # TODO: 木のHPを減らす
+      @game.world.buildings.delete_at(loc)
     when :farming
       @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(-1)
       @game.world.buildings[player] << Building.new(id: :seeds0, loc: loc)
