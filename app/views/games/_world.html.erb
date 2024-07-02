@@ -89,22 +89,28 @@
             <%= game.resources[player].values.map { _1.resource.emoji * _1.amount }.join('') %>
           </li>
           <% menu_actionable_actions = turn.menu_actionable_actions(player) %>
-          <% Turn::MENU_ACTIONS.at(game, player).each do |k, v| %>
-            <li class="list-group-item">
-              <button
-                  data-bs-toggle="button"
-                  class="btn btn-primary <%= 'active' if menu_action&.id == k %>"
-                  <%= 'disabled' if !menu_actionable_actions.keys.include?(k) %>
-                  onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
-                <%= v.japanese %>
-                <small>
-                  <% v.cost.each do |k, amount| %>
-                    <%= "#{RESOURCES[k].emoji}" * amount %>
-                  <% end %>
-                </small>
-              </button>
-            </li>
-          <% end %>
+          <li class="list-group-item">
+            <% Turn::MENU_ACTIONS.at(game, player).each do |k, v| %>
+              <div class="row align-items-start">
+                <div class="col">
+                  <button
+                      data-bs-toggle="button"
+                      class="btn btn-primary <%= 'active' if menu_action&.id == k %>"
+                      <%= 'disabled' if !menu_actionable_actions.key?(k) %>
+                      onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
+                    <%= v.japanese %>
+                  </button>
+                </div>
+                <div class="col">
+                  <small>
+                    <% v.cost.each do |k, amount| %>
+                      <%= "#{RESOURCES[k].emoji}" * amount %>
+                    <% end %>
+                  </small>
+                </div>
+              </div>
+            <% end %>
+          </li>
           <li class="list-group-item">
             <div class="d-grid gap-2 col-6 mx-auto">
               <button

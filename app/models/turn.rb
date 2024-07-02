@@ -46,7 +46,7 @@ class Turn
 
   # { Symbol => [Location] }
   def menu_actionable_actions(player)
-    return [] if @game.winner
+    return {} if @game.winner
 
     MENU_ACTIONS.at(@game, player).select {|_, menu_action|
       menu_action.cost.all? {|k, amount|
@@ -88,6 +88,23 @@ class Turn
     end
   end
 
+  def unit_passive_action!(player, unit)
+    opponent = player.opponent
+    case @game.world.buildings.at(unit.loc)
+    in [^player, Building(type: :fruits) => b]
+      @messages << "#{player.japanese}: #{b.type}を収穫しました"
+      @game.world.buildings.delete_at(unit.loc)
+      @game.resources[player][:money] = @game.resources[player][:money].add_amount(3)
+      @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(2)
+    in [^(player.opponent), b]
+      @messages << "#{player.japanese}: #{b.type}を略奪しました"
+      @game.resources[player][:money] = @game.resources[player][:money].add_amount(1)
+      @game.world.buildings.delete_at(unit.loc)
+    else
+      # do nothing
+    end
+  end
+
   def unit_action!(player, unit, loc, action)
     raise 'must not happen: The game is already finished' if @game.winner
     raise 'must not happen: The unit is not actionable' unless @actionable_units[player].include?(unit)
@@ -97,21 +114,7 @@ class Turn
     case action
     when :move
       unit.move!(loc)
-
-      # ついでに収穫 / 略奪
-      opponent = player.opponent
-      case @game.world.buildings.at(loc)
-      in [^player, Building(type: :fruits)]
-        @messages << "#{player.japanese}: ついでにそのまま収穫しました"
-        @game.world.buildings.delete_at(loc)
-        @game.resources[player][:money] = @game.resources[player][:money].add_amount(3)
-        @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(2)
-      in [^(player.opponent), b]
-        @messages << "#{player.japanese}: ついでにそのまま#{b.type}を略奪しました"
-        @game.world.buildings.delete_at(loc)
-      else
-        # do nothing
-      end
+      unit_passive_action!(player, unit)
     when :harvest_woods
       @game.resources[player][:wood] = @game.resources[player][:wood].add_amount(3)
       @game.world.hexes[loc.y][loc.x] = nil
@@ -154,7 +157,13 @@ class Turn
         end
       end
       @game.tick!
-      Turn.new(num: @num + 1, game: @game)
+      t = Turn.new(num: @num + 1, game: @game)
+      t.game.world.unitss.each do |p, units|
+        units.each do |u|
+          t.unit_passive_action!(p, u)
+        end
+      end
+      t
     end
   end
 end
