@@ -20,6 +20,8 @@ class Turn
     locs.select {|loc| !!@game.reason_unit_action(player, unit, loc) }
   end
 
+  MenuAction = Data.define(:id, :japanese, :cost, :location_type)
+
   MENU_ACTIONS = {
     #                 :japanese          :cost          :location_type
     farming:         ['農業',            { seed: 1 },   :unit],
@@ -27,17 +29,17 @@ class Turn
     build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
     build_landmine:  ['建設/地雷',       { ore: 3 },    :unit],
     spawn_unit:      ['ユニット生産',    { money: :f }, :base],
-  }.transform_values {|a, b, c| { japanese: a, cost: b, location_type: c } }
+  }.to_h {|id, (a, b, c)| [id, MenuAction.new(id: id, japanese: a, cost: b, location_type: c)] }
   def MENU_ACTIONS.at(game, player)
     transform_values {|v|
-      cost = v[:cost].transform_values {|amount|
+      cost = v.cost.transform_values {|amount|
         if amount == :f
           amount = game.cost_to_spawn_unit(player)
         else
           amount
         end
       }
-      v.merge(cost: cost)
+      MenuAction.new(id: v.id, japanese: v.japanese, cost: cost, location_type: v.location_type)
     }
   end
   MENU_ACTIONS.freeze
@@ -46,12 +48,12 @@ class Turn
   def menu_actionable_actions(player)
     return [] if @game.winner
 
-    MENU_ACTIONS.at(@game, player).select {|_, hash|
-      hash[:cost].all? {|k, amount|
+    MENU_ACTIONS.at(@game, player).select {|_, menu_action|
+      menu_action.cost.all? {|k, amount|
         @game.resources[player][k].amount >= amount
       }
-    }.transform_values {|v|
-      case v[:location_type]
+    }.transform_values {|m|
+      case m.location_type
       when :unit
         @game.world.unitss[player].map(&:loc).select {|loc|
           @game.world.buildings.at(loc).nil?

@@ -10,6 +10,7 @@ class WorldTag < Live::View
   @@completed = { Human => false, Pest => false }
   @@autoplaying = false
   @@pest_ai_stared = false
+  @@menu_action = nil
 
   def initialize(...)
     super(...)
@@ -65,12 +66,14 @@ class WorldTag < Live::View
         human_flush: @@human_flush,
         completed: @@completed,
         hexes_view: @@game.world.hexes_view,
+        menu_action: @@menu_action,
       },
     ))
   end
 
   def handle(event)
     @@human_flush = nil
+    player = Human # TODO: 今は人間側しか操作できない...
 
     pp event
     case event[:type]
@@ -88,18 +91,34 @@ class WorldTag < Live::View
         # @@turn.building_action!(Human, b) if @@game.reason_building_action(Human, b)
         # @@human_focus = nil
       else # nil
-        if human = @@turn.actionable_units[Human].find { _1.loc == loc }
-          @@human_focus = human
+        if @@menu_action
+          locs = @@turn.menu_actionable_actions(player)[@@menu_action.id]
+          if locs.include?(loc)
+            @@game.menu_action!(player, @@menu_action.id, loc)
+          else
+            @@menu_action = nil
+          end
         else
-          # if b = @@turn.actionable_buildings[Human].find { _1.loc == loc }
-          #   @@human_focus = b if @@game.reason_building_action(Human, b)
-          # end
+          if human = @@turn.actionable_units[Human].find { _1.loc == loc }
+            @@human_focus = human
+          end
         end
       end
-      update!
+    when 'menu'
+      @@human_focus = nil
+
+      menu_action = Turn::MENU_ACTIONS[event[:menu].to_sym]
+      case menu_action
+      when nil
+        # do nothing
+      when @@menu_action
+        @@menu_action = nil
+      else
+        @@menu_action = menu_action
+      end
     when 'rightclick'
       @@human_focus = nil
-      update!
+      @@menu_action = nil
     when 'complete'
       case event[:player]
       when 'Human'
@@ -118,8 +137,6 @@ class WorldTag < Live::View
         @@human_focus = nil
         @@turn = @@turn.next
       end
-
-      update!
     when 'autoplay_all'
       return if @@autoplaying
       @@autoplaying = true
@@ -148,6 +165,7 @@ class WorldTag < Live::View
     when 'reset'
       exit
     end
+    update!
   end
 end
 

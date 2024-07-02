@@ -311,7 +311,7 @@ class GameState
   end
 
   def menu_action!(player, action, loc)
-    Turn::MENU_ACTIONS.at(self, player)[action][:cost].each do |k, amount|
+    Turn::MENU_ACTIONS.at(self, player)[action].cost.each do |k, amount|
       @resources[player][k] = @resources[player][k].add_amount(-amount)
     end
 
@@ -324,21 +324,6 @@ class GameState
       @total_spawned_units[player] += 1
     else
       p "Not implemented yet: #{action}"
-    end
-  end
-
-  # returns nil | String
-  def reason_building_action(player, building)
-    return nil if self.winner
-
-    case building.type
-    when :base
-      cost = cost_to_spawn_unit(player)
-      if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(building.loc)
-        'ユニット生産'
-      end
-    else
-      false
     end
   end
 

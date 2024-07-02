@@ -1,3 +1,4 @@
+<% menu_actionable_locs = menu_action ? turn.menu_actionable_actions(Human).fetch(menu_action.id, []) : [] %>
 <div style="height: 640px; width: 480px; margin: auto; border: solid 0px black">
   <% if game.winner %>
     <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
@@ -55,6 +56,16 @@
             <%= r %>
           <% end %>
         <% end %>
+
+        <% if menu_actionable_locs.include?(loc) %>
+          <div class="hex" style="font-size: 32px;">
+            <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
+          </div>
+          <div class="hex" style="font-size: 16px;">
+            <%= menu_action.japanese %>
+          </div>
+        <% end %>
+
         <!--
           <nobr>
           <%= [x, y] %>
@@ -81,12 +92,13 @@
           <% Turn::MENU_ACTIONS.at(game, player).each do |k, v| %>
             <li class="list-group-item">
               <button
-                  class="btn btn-secondary"
+                  data-bs-toggle="button"
+                  class="btn btn-primary <%= 'active' if menu_action&.id == k %>"
                   <%= 'disabled' if !menu_actionable_actions.keys.include?(k) %>
-                  type="submit">
-                <%= v[:japanese] %>
+                  onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
+                <%= v.japanese %>
                 <small>
-                  <% v[:cost].each do |k, amount| %>
+                  <% v.cost.each do |k, amount| %>
                     <%= "#{RESOURCES[k].emoji}" * amount %>
                   <% end %>
                 </small>
