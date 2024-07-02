@@ -8,8 +8,8 @@ Pest = Player.new('Pest', '害虫', Human)
 Human.opponent = Pest
 
 Building = Data.define(:type, :loc, :hp) do
-  def initialize(type:, loc:)
-    hp =
+  def initialize(type:, loc:, hp: nil)
+    hp ||=
       case type
       when :base, :seeds0, :seeds, :flowers, :fruits, :mine, :trail
         nil
@@ -22,7 +22,7 @@ Building = Data.define(:type, :loc, :hp) do
       else
         raise "Unknown Building type: #{type}"
       end
-    super(type:, loc:, hp: hp)
+    super(type:, loc:, hp:)
   end
 end
 

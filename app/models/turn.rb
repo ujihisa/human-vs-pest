@@ -94,8 +94,10 @@ class Turn
     in [^player, Building(type: :fruits) => b]
       @messages << "#{player.japanese}: #{b.type}を収穫しました"
       @game.world.buildings.delete_at(unit.loc)
+      @game.world.buildings[player] << b.with(type: :seeds0)
+
       @game.resources[player][:money] = @game.resources[player][:money].add_amount(3)
-      @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(2)
+      @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(1)
     in [^(player.opponent), b]
       @messages << "#{player.japanese}: #{b.type}を略奪しました"
       @game.resources[player][:money] = @game.resources[player][:money].add_amount(1)
