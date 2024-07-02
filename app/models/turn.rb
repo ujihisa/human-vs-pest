@@ -70,20 +70,23 @@ class Turn
     }.to_h
   end
 
-  def building_action!(player, building)
-    case building.type
-    when :base
-      cost = @game.cost_to_spawn_unit(player)
+  def menu_action!(player, action, loc)
+    MENU_ACTIONS.at(@game, player)[action].cost.each do |k, amount|
+      @game.resources[player][k] = @game.resources[player][k].add_amount(-amount)
+    end
 
-      @game.moneys[player] -= cost
+    case action
+    when :farming
+      @game.world.buildings[player] << Building.new(type: :seeds0, loc: loc)
+    when :spawn_unit
       new_unit = Unit.new(loc: @game.world.buildings.of(player, :base).loc, hp: 8)
       @game.world.unitss[player] << new_unit
       @game.total_spawned_units[player] += 1
-
       @actionable_units[player] += [new_unit]
+    else
+      p "Not implemented yet: #{action}"
     end
   end
-
 
   def unit_action!(player, unit, loc, action)
     raise 'must not happen: The game is already finished' if @game.winner

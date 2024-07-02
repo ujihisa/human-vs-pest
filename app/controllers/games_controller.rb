@@ -35,7 +35,7 @@ class WorldTag < Live::View
 
           player = Pest
           while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
-            @@game.menu_action!(player, action, locs.sample)
+            @@turn.menu_action!(player, action, locs.sample)
           end
           sleep 1
 
@@ -93,8 +93,8 @@ class WorldTag < Live::View
       else # nil
         if @@menu_action
           locs = @@turn.menu_actionable_actions(player)[@@menu_action.id]
-          if locs.include?(loc)
-            @@game.menu_action!(player, @@menu_action.id, loc)
+          if locs && locs.include?(loc)
+            @@turn.menu_action!(player, @@menu_action.id, loc)
           else
             @@menu_action = nil
           end
@@ -145,7 +145,7 @@ class WorldTag < Live::View
         loop do
           players.each do |player|
             while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
-              @@game.menu_action!(player, action, locs.sample)
+              @@turn.menu_action!(player, action, locs.sample)
             end
             update!; sleep 0.1
 
