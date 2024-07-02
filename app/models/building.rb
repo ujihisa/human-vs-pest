@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-Building = Data.define(:id, :loc, :hp) do
-  def initialize(id:, loc:, hp: nil)
+Building = Data.define(:player, :id, :loc, :hp) do
+  def initialize(id:, player:, loc:, hp: nil)
     hp ||=
       case id
       when :base, :seeds0, :seeds, :flowers, :fruits, :landmine, :trail, :pond
@@ -15,7 +15,7 @@ Building = Data.define(:id, :loc, :hp) do
       else
         raise "Unknown Building type: #{id}"
       end
-    super(id:, loc:, hp:)
+    super(player:, id:, loc:, hp:)
   end
 
   # ownerは無条件で通行可能なので、ownerでないと仮定する
@@ -23,7 +23,7 @@ Building = Data.define(:id, :loc, :hp) do
     ![:tree, :pond, :rock, :barricade].include?(id)
   end
 
-  def view(player)
+  def view
     building_table = {
       Human => {
         base: '🏠',
@@ -44,6 +44,6 @@ Building = Data.define(:id, :loc, :hp) do
         pond: '🌊',
       },
     }
-    building_table[player][id]
+    building_table[self.player][self.id]
   end
 end

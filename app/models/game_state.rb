@@ -31,7 +31,7 @@ class World
       pest: Location.new(size_x / 2, size_y - 1),
     }
 
-    trees = Array.new(size_x * size_y / 5) {
+    trees = Array.new(size_x * size_y / 4) {
       10.times.find {
         loc = Location.new(rand(size_x), rand(size_y))
         if loc != bases[:human] && loc != bases[:pest]
@@ -40,9 +40,9 @@ class World
       } or raise 'Could not find a suitable tree location'
     }
 
-    ponds = Array.new(size_x * size_y / 10) {
+    ponds = Array.new(size_x * size_y / 8) {
       10.times.find {
-        loc = Location.new(rand(size_x), rand(size_y))
+        loc = Location.new(rand(size_x), rand(2 ...(size_y - 2)))
         if loc != bases[:human] && loc != bases[:pest] && !trees.include?(loc)
           break loc
         end
@@ -51,20 +51,19 @@ class World
 
     buildings = {
       Human => [
-        Building.new(id: :base, loc: bases[:human]),
+        Building.new(player: Human, id: :base, loc: bases[:human]),
       ],
-      Pest => [Building.new(id: :base, loc: bases[:pest])],
+      Pest => [
+        Building.new(player: Pest, id: :base, loc: bases[:pest]),
+      ],
       :world => [
-        *trees.map { Building.new(id: :tree, loc: _1) },
-        *ponds.map { Building.new(id: :pond, loc: _1) },
+        *trees.map { Building.new(player: :world, id: :tree, loc: _1) },
+        *ponds.map { Building.new(player: :world, id: :pond, loc: _1) },
       ]
     }
-    # Returns (Player, Building)
+    # Returns Building
     def buildings.at(loc)
-      self.filter_map {|p, bs|
-        b = bs.find { _1.loc == loc }
-        [p, b] if b
-      }.first
+      self.values.flatten(1).find { _1.loc == loc }
     end
     def buildings.delete_at(loc)
       self.each do |_, bs|
@@ -128,8 +127,8 @@ class World
     raise "Missing player" unless player
     raise "Missing loc" unless loc
 
-    (owner, b) = @buildings.at(loc)
-    if owner && player != owner && !b.passable?
+    b = @buildings.at(loc)
+    if b && player != b.player && !b.passable?
       return true
     end
 
@@ -140,7 +139,7 @@ class World
   def hexes_view
     Array.new(@size_y) {|y|
       Array.new(@size_x) {|x|
-        background = @buildings.at(Location.new(x, y))&.then {|p, b| b.view(p) }
+        background = @buildings.at(Location.new(x, y))&.then {|b| b.view }
         background ||= '　'
 
         human = @unitss[Human].find { _1.loc == Location.new(x, y) }
@@ -289,8 +288,8 @@ class GameState
       return :move
     end
 
-    (owner, b) = @world.buildings.at(loc)
-    if owner
+    b = @world.buildings.at(loc)
+    if b
       case b.id
       when :tree
         return :harvest_woods
@@ -309,11 +308,11 @@ class GameState
       bs.each.with_index do |b, i|
         case b.id
         when :seeds0
-          bs[i] = Building.new(id: :seeds, loc: b.loc)
+          bs[i] = b.with(id: :seeds)
         when :seeds
-          bs[i] = Building.new(id: :flowers, loc: b.loc)
+          bs[i] = b.with(id: :flowers)
         when :flowers
-          bs[i] = Building.new(id: :fruits, loc: b.loc)
+          bs[i] = b.with(id: :fruits)
         end
       end
     end

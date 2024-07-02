@@ -37,6 +37,12 @@ class WorldTag < Live::View
           end
           sleep 1
 
+          # TODO: この4行は消して! debug code!
+          if @@turn.actionable_units[player].nil?
+            pp @@turn.actionable_units
+            pp player
+          end
+
           @@turn.actionable_units[player].each do |u|
             locs = @@turn.unit_actionable_locs(player, u)
             ua = AI.unit_action_for(@@game, player, u, locs)
