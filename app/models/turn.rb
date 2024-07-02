@@ -10,12 +10,11 @@ class Turn
   end
   attr_reader :num, :game, :actionable_units, :messages
 
-  # neighbours系actionのみ
   def unit_actionable_locs(player, unit)
     return [] if @game.winner
     return [] if !@actionable_units[player].include?(unit)
 
-    locs = @game.world.neighbours(unit.loc)
+    locs = (@game.world.neighbours(unit.loc) + unit.moveable(world: @game.world)).uniq
 
     locs.select {|loc| !!@game.reason_unit_action(player, unit, loc) }
   end
@@ -23,11 +22,11 @@ class Turn
   MenuAction = Data.define(:id, :japanese, :cost, :location_type)
 
   MENU_ACTIONS = {
-    #                 :japanese          :cost          :location_type
+    #                 :japanese          :cost          :location_type, :overridable_buildings
     farming:         ['農業',            { seed: 1 },   :unit],
-    # build_trail:     ['建設/小道',       { wood: 1 },   :unit],
-    # build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
-    # build_landmine:  ['建設/地雷',       { ore: 3 },    :unit],
+    build_trail:     ['建設/小道',       { wood: 1 },   :unit],
+    build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
+    build_landmine:  ['建設/地雷',       { ore: 3 },    :unit],
     spawn_unit:      ['ユニット生産',    { money: :f }, :base],
   }.to_h {|id, (a, b, c)| [id, MenuAction.new(id: id, japanese: a, cost: b, location_type: c)] }
   def MENU_ACTIONS.at(game, player)
@@ -56,7 +55,8 @@ class Turn
       case m.location_type
       when :unit
         @game.world.unitss[player].map(&:loc).select {|loc|
-          @game.world.buildings.at(loc).nil?
+          # 自分の拠点だけは壊せない
+          @game.world.buildings.of(player, :base).loc != loc
         }
       when :base
         [@game.world.buildings.of(player, :base).loc].select {|loc|
@@ -77,8 +77,19 @@ class Turn
 
     case action
     when :farming
+      if b = @game.world.buildings.at(loc) and b.id != :base
+        @messages << "#{player.japanese}: #{b.id}が邪魔なのでとりあえず撤去しました"
+        @game.world.buildings.delete_at(loc)
+      end
+
+      @messages << "#{player.japanese}: #{loc.inspect}で農業をしました"
       @game.world.buildings[player] << Building.new(player: player, id: :seeds0, loc: loc)
+    when :build_trail
+      @messages << "#{player.japanese}: #{loc.inspect}に小道を建設しました"
+      @game.world.buildings[player] << Building.new(player: player, id: :trail, loc: loc)
     when :spawn_unit
+      @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
+
       new_unit = Unit.new(player: player, loc: @game.world.buildings.of(player, :base).loc, hp: 8)
       @game.world.unitss[player] << new_unit
       @game.total_spawned_units[player] += 1

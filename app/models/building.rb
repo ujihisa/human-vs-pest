@@ -31,6 +31,7 @@ Building = Data.define(:player, :id, :loc, :hp) do
         flowers: '🌷',
         seeds: '🌱',
         seeds0: '🌱',
+        trail: '🛤',
       },
       Pest => {
         base: '🕳',
@@ -38,13 +39,14 @@ Building = Data.define(:player, :id, :loc, :hp) do
         flowers: '🦠',
         seeds: '🧬',
         seeds0: '🧬',
+        trail: '🛤',
       },
       :world => {
         tree: '🌲',
         pond: '🌊',
       },
     }
-    building_table[self.player][self.id]
+    building_table[player][id]
   end
 
   def background_img

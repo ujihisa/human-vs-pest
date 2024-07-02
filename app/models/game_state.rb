@@ -204,10 +204,21 @@ class Unit
   attr_accessor :hp
 
   # returns [(Integer, Integer)]
+  # TODO: 小道が複数あるときにも再帰的に対応。そのためにunit testを追加
   def moveable(world:)
     world.neighbours(@loc).select {|loc|
-      !world.not_passable?(@player, loc) &&
-        !world.unitss.values.flatten(1).any? { _1.loc == loc }
+      !world.not_passable?(@player, loc)
+    }.flat_map {|loc|
+      b = world.buildings.at(loc)
+      if b && b.player == @player && b.id == :trail
+        [loc] + world.neighbours(loc).select {|loc|
+          !world.not_passable?(@player, loc)
+        }
+      else
+        [loc]
+      end
+    }.select {|loc|
+      !world.unitss.values.flatten(1).any? { _1.loc == loc }
     }
   end
 
@@ -253,7 +264,7 @@ class GameState
     @resources = {
       Human => {
         seed: PlayerResource.new(resource_id: :seed, amount: 1),
-        wood: PlayerResource.new(resource_id: :wood , amount: 0),
+        wood: PlayerResource.new(resource_id: :wood , amount: 10),
         ore: PlayerResource.new(resource_id: :ore, amount: 0),
         money: PlayerResource.new(resource_id: :money, amount: 0),
       },
@@ -307,10 +318,6 @@ class GameState
     end
 
     nil
-  end
-
-  private def vacant?(loc)
-    @world.buildings.at(loc).nil?
   end
 
   def tick!
