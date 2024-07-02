@@ -307,156 +307,159 @@ class GameState
 
   def menu_action!(player, action, loc)
     Turn::MENU_ACTIONS[action][:consume].each do |k, v|
-      @resources[player][k] = @resources[player][k].add_amount(-v)
-    end
-
-    case action
-    when :farming
-      @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
-    when :spawn_unit
-      new_unit = Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
-      @world.unitss[player] << new_unit
-      @total_spawned_units[player] += 1
-    else
-      p "Not implemented yet: #{action}"
-    end
-  end
-
-  # returns nil | String
-  def reason_building_action(player, building)
-    return nil if self.winner
-
-    case building.type
-    when :base
-      cost = cost_to_spawn_unit(player)
-      if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(building.loc)
-        'ユニット生産'
+      if v == :f
+        v = cost_to_spawn_unit(player)
       end
-    else
-      false
+    @resources[player][k] = @resources[player][k].add_amount(-v)
+  end
+
+  case action
+  when :farming
+    @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
+  when :spawn_unit
+    new_unit = Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
+    @world.unitss[player] << new_unit
+    @total_spawned_units[player] += 1
+  else
+    p "Not implemented yet: #{action}"
+  end
+end
+
+# returns nil | String
+def reason_building_action(player, building)
+  return nil if self.winner
+
+  case building.type
+  when :base
+    cost = cost_to_spawn_unit(player)
+    if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(building.loc)
+      'ユニット生産'
+    end
+  else
+    false
+  end
+end
+
+# nil | Symbol
+def reason_unit_action(player, unit, loc)
+  return nil if self.winner
+
+  if 2 < unit.hp
+    if @world.unitss[player.opponent].find { loc == _1.loc }
+      return :melee_attack
     end
   end
 
-  # nil | Symbol
-  def reason_unit_action(player, unit, loc)
-    return nil if self.winner
+  if unit.moveable(world: @world).include?(loc)
+    return :move
+  end
 
-    if 2 < unit.hp
-      if @world.unitss[player.opponent].find { loc == _1.loc }
-        return :melee_attack
+  nil
+end
+
+private def vacant?(loc)
+  if @world.hex_at(loc)
+    return false
+  end
+
+  @world.buildings.at(loc).nil?
+end
+
+def tick!
+  @world.buildings.each do |_, bs|
+    bs.each.with_index do |b, i|
+      case b.type
+      when :seeds0
+        bs[i] = Building.new(type: :seeds, loc: b.loc)
+      when :seeds
+        bs[i] = Building.new(type: :flowers, loc: b.loc)
+      when :flowers
+        bs[i] = Building.new(type: :fruits, loc: b.loc)
       end
     end
-
-    if unit.moveable(world: @world).include?(loc)
-      return :move
-    end
-
-    nil
   end
+end
 
-  private def vacant?(loc)
-    if @world.hex_at(loc)
-      return false
-    end
-
-    @world.buildings.at(loc).nil?
-  end
-
-  def tick!
-    @world.buildings.each do |_, bs|
-      bs.each.with_index do |b, i|
-        case b.type
-        when :seeds0
-          bs[i] = Building.new(type: :seeds, loc: b.loc)
-        when :seeds
-          bs[i] = Building.new(type: :flowers, loc: b.loc)
-        when :flowers
-          bs[i] = Building.new(type: :fruits, loc: b.loc)
-        end
-      end
-    end
-  end
-
-  def draw
-    p(
-      moneys: @moneys,
-      resources: @resources.transform_values {|rs| rs.values.map(&:amount) },
-      # num_units: @world.unitss.transform_values(&:size),
-    )
-    @world.draw
-  end
+def draw
+  p(
+    moneys: @moneys,
+    resources: @resources.transform_values {|rs| rs.values.map(&:amount) },
+    # num_units: @world.unitss.transform_values(&:size),
+  )
+  @world.draw
+end
 end
 
 module AI
-  # [Location, Symbol] | nil
-  def self.unit_action_for(game, player, u, locs)
-    uas = locs.map {|loc| [loc, game.reason_unit_action(player, u, loc)] }
+# [Location, Symbol] | nil
+def self.unit_action_for(game, player, u, locs)
+  uas = locs.map {|loc| [loc, game.reason_unit_action(player, u, loc)] }
 
-    # セルフケア最優先
-    if u.hp < 3
-      return nil
-    end
-
-    # 次いで近接攻撃
-    if ua = uas.find { [:melee_attack].include?(_1[1]) }
-      return ua
-    end
-
-    # 相手が自拠点に近づいてきていれば戻る
-    min_dist = game.world.unitss[player.opponent].map {|u| distance(u.loc, game.world.buildings.of(player, :base).loc) }.min
-    if min_dist && min_dist < 4
-      ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
-        distance(loc, game.world.buildings.of(player, :base).loc)
-      }
-      return ua if ua
-    end
-
-    # 相手より人数が多ければrage mode
-    if game.world.unitss[player.opponent].size < game.world.unitss[player].size
-      ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
-        distance(loc, game.world.buildings.of(player.opponent, :base).loc)
-      }
-      ua
-    else
-      # じわじわ成長を狙う
-      ua = uas.select {|_, a| a != :move }.sample
-      ua ||= uas.sample
-      ua
-    end
+  # セルフケア最優先
+  if u.hp < 3
+    return nil
   end
 
-  private_class_method def self.distance(loc0, loc1)
-    Math.sqrt((loc1.x - loc0.x) ** 2 + (loc1.y - loc0.y) ** 2)
+  # 次いで近接攻撃
+  if ua = uas.find { [:melee_attack].include?(_1[1]) }
+    return ua
+  end
+
+  # 相手が自拠点に近づいてきていれば戻る
+  min_dist = game.world.unitss[player.opponent].map {|u| distance(u.loc, game.world.buildings.of(player, :base).loc) }.min
+  if min_dist && min_dist < 4
+    ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
+      distance(loc, game.world.buildings.of(player, :base).loc)
+    }
+    return ua if ua
+  end
+
+  # 相手より人数が多ければrage mode
+  if game.world.unitss[player.opponent].size < game.world.unitss[player].size
+    ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
+      distance(loc, game.world.buildings.of(player.opponent, :base).loc)
+    }
+    ua
+  else
+    # じわじわ成長を狙う
+    ua = uas.select {|_, a| a != :move }.sample
+    ua ||= uas.sample
+    ua
   end
 end
 
-if __FILE__ == $0
-  require_relative 'turn'
-  require_relative 'location'
+private_class_method def self.distance(loc0, loc1)
+  Math.sqrt((loc1.x - loc0.x) ** 2 + (loc1.y - loc0.y) ** 2)
+end
+end
 
-  turn = Turn.new(
-    num: 1,
-    game: GameState.new(world: World.create(size_x: 5, size_y: 8)),
-  )
-  game = turn.game
+if __FILE__ == $0
+require_relative 'turn'
+require_relative 'location'
+
+turn = Turn.new(
+  num: 1,
+  game: GameState.new(world: World.create(size_x: 5, size_y: 8)),
+)
+game = turn.game
+turn.draw
+
+players = [Human, Pest]
+loop do
+  players.each do |player|
+    while ((action, locs) = turn.menu_actionable_actions(player).first) # TODO: sample
+      game.menu_action!(player, action, locs.sample)
+    end
+
+    turn.actionable_units[player].each do |u|
+      locs = turn.unit_actionable_locs(player, u)
+      ua = AI.unit_action_for(game, player, u, locs)
+      turn.unit_action!(player, u, ua.first, ua.last) if ua
+    end
+  end
   turn.draw
 
-  players = [Human, Pest]
-  loop do
-    players.each do |player|
-      while ((action, locs) = turn.menu_actionable_actions(player).first) # TODO: sample
-        game.menu_action!(player, action, locs.sample)
-      end
-
-      turn.actionable_units[player].each do |u|
-        locs = turn.unit_actionable_locs(player, u)
-        ua = AI.unit_action_for(game, player, u, locs)
-        turn.unit_action!(player, u, ua.first, ua.last) if ua
-      end
-    end
-    turn.draw
-
-    break if game.winner
-    turn = turn.next
-  end
+  break if game.winner
+  turn = turn.next
+end
 end

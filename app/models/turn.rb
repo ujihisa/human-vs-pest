@@ -21,18 +21,24 @@ class Turn
   end
 
   MENU_ACTIONS = {
-    farming:         { japanese: '農業',            consume: { seed: 1 }, valid_location_type: :unit },
-    build_trail:     { japanese: '建設/小道',       consume: { wood: 1 }, valid_location_type: :unit },
-    build_barricade: { japanese: '建設/バリケード', consume: { wood: 2 }, valid_location_type: :unit },
-    build_landmine:  { japanese: '建設/地雷',       consume: { ore: 3 }, valid_location_type: :unit },
-    spawn_unit:      { japanese: 'ユニット生産',    consume: { money: 1 }, valid_location_type: :base }, # TODO: 金額を可変に
-  }
+    #                 :japanese          :consume      :valid_location_type
+    farming:         ['農業',            { seed: 1 },  :unit],
+    build_trail:     ['建設/小道',       { wood: 1 },  :unit],
+    build_barricade: ['建設/バリケード', { wood: 2 },  :unit],
+    build_landmine:  ['建設/地雷',       { ore: 3 },   :unit],
+    spawn_unit:      ['ユニット生産',    { money: :f }, :base],
+  }.transform_values {|a, b, c| { japanese: a, consume: b, valid_location_type: c } }
   # { Symbol => [Location] }
   def menu_actionable_actions(player)
     return [] if @game.winner
 
     MENU_ACTIONS.select {|_, hash|
-      hash[:consume].all? {|k, v| @game.resources[player][k].amount >= v }
+      hash[:consume].all? {|k, v|
+        if v == :f
+          v = @game.cost_to_spawn_unit(player)
+        end
+        @game.resources[player][k].amount >= v
+      }
     }.transform_values {|v|
       case v[:valid_location_type]
       when :unit
