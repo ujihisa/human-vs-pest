@@ -1,16 +1,17 @@
 # frozen_string_literal: true
 
-Human = Data.define(:name, :japanese) {
-  def opponent
-    Pest
+Player = Data.define(:id, :japanese, :opponent_id) do
+  def self.find(id)
+    [Human, Pest].find { _1.id == id }
   end
-}.new('Human', '人間')
 
-Pest = Data.define(:name, :japanese) {
   def opponent
-    Human
+    self.class.find(opponent_id)
   end
-}.new('Pest', '害虫')
+end
+
+Human = Player.new(id: :human, japanese: '人間', opponent_id: :pest)
+Pest = Player.new(id: :pest, japanese: '害虫', opponent_id: :human)
 
 class World
   # size_x Integer
@@ -406,7 +407,7 @@ if __FILE__ == $0
         turn.menu_action!(player, action, locs.sample)
       end
 
-      turn.actionable_units[player].each do |u|
+      turn.actionable_units[player.id].each do |u|
         locs = turn.unit_actionable_locs(player, u)
         ua = AI.unit_action_for(game, player, u, locs)
         turn.unit_action!(player, u, ua.first, ua.last) if ua

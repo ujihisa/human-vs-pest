@@ -37,7 +37,7 @@ class WorldTag < Live::View
           end
           sleep 1
 
-          @@turn.actionable_units[player].each do |u|
+          @@turn.actionable_units[player.id].each do |u|
             locs = @@turn.unit_actionable_locs(player, u)
             ua = AI.unit_action_for(@@game, player, u, locs)
             @@turn.unit_action!(player, u, ua.first, ua.last) if ua
@@ -92,7 +92,7 @@ class WorldTag < Live::View
             @@menu_action = nil
           end
         else
-          if human = @@turn.actionable_units[Human].find { _1.loc == loc }
+          if human = @@turn.actionable_units[:human].find { _1.loc == loc }
             @@human_focus = human
           end
         end
@@ -113,13 +113,9 @@ class WorldTag < Live::View
       @@human_focus = nil
       @@menu_action = nil
     when 'complete'
-      case event[:player]
-      when 'Human'
-        player = Human
-      when 'Pest'
-        player = Pest
-      else
-        raise "Must not happen: Unknown player: #{event[:player]}"
+      player = Player.find(event[:player_id].to_sym)
+      if player.nil?
+        raise "Must not happen: Unknown player: #{event[:player_id]}"
       end
 
       @@completed[player] = true
@@ -142,7 +138,7 @@ class WorldTag < Live::View
             end
             update!; sleep 0.1
 
-            @@turn.actionable_units[player].each do |u|
+            @@turn.actionable_units[player.id].each do |u|
               locs = @@turn.unit_actionable_locs(player, u)
               ua = AI.unit_action_for(@@game, player, u, locs)
               @@turn.unit_action!(player, u, ua.first, ua.last) if ua

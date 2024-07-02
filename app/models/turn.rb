@@ -5,14 +5,14 @@ class Turn
     @num = num
     @game = game
 
-    @actionable_units = @game.world.unitss.transform_values(&:dup).dup
+    @actionable_units = @game.world.unitss.to_h {|p, us| [p.id, us.dup] }
     @messages = []
   end
   attr_reader :num, :game, :actionable_units, :messages
 
   def unit_actionable_locs(player, unit)
     return [] if @game.winner
-    return [] if !@actionable_units[player].include?(unit)
+    return [] if !@actionable_units[player.id].include?(unit)
 
     locs = (@game.world.neighbours(unit.loc) + unit.moveable(world: @game.world)).uniq
 
@@ -93,7 +93,7 @@ class Turn
       new_unit = Unit.new(player: player, loc: @game.world.buildings.of(player, :base).loc, hp: 8)
       @game.world.unitss[player] << new_unit
       @game.total_spawned_units[player] += 1
-      @actionable_units[player] += [new_unit]
+      @actionable_units[player.id] += [new_unit]
     else
       p "Not implemented yet: #{action}"
     end
@@ -120,7 +120,7 @@ class Turn
 
   def unit_action!(player, unit, loc, action)
     raise 'must not happen: The game is already finished' if @game.winner
-    raise 'must not happen: The unit is not actionable' unless @actionable_units[player].include?(unit)
+    raise 'must not happen: The unit is not actionable' unless @actionable_units[player.id].include?(unit)
 
     @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが #{action} しました"
 
@@ -157,11 +157,11 @@ class Turn
       end
     end
 
-    @actionable_units[player] -= [unit]
+    @actionable_units[player.id] -= [unit]
 
     if @game.winner
       @messages << "#{game.winner.japanese} が勝利しました!"
-      @actionable_units = { Human => [], Pest => [] }
+      @actionable_units = { human: [], pest: [] }
     end
   end
 
@@ -175,7 +175,8 @@ class Turn
     if @game.winner
       raise 'must not happen: The game is already finished'
     else
-      @actionable_units.each do |player, units|
+      @actionable_units.each do |player_id, units|
+        player = Player.find(player_id)
         units.each do |u|
           @messages << "#{player.japanese}: #{u.loc.inspect}にいるユニットが回復しました"
           u.hp = [u.hp + 3, 8].min

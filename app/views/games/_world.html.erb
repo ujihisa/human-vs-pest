@@ -101,7 +101,7 @@
               <button
                   class="btn btn-secondary"
                   <%= 'disabled' if completed[player] || game.winner %>
-                  onclick="window.event = event; live.forward('world', {type: 'complete', player: '<%= player.name %>', clientX: event.clientX, clientY: event.clientY});">
+                  onclick="window.event = event; live.forward('world', {type: 'complete', player_id: '<%= player.id %>', clientX: event.clientX, clientY: event.clientY});">
                 操作終了
               </button>
             </div>
