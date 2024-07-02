@@ -31,8 +31,6 @@ class WorldTag < Live::View
       @@pest_ai_stared = true
       Async do
         until @@game.winner do
-          sleep 1
-
           player = Pest
           while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
             @@turn.menu_action!(player, action, locs.sample)

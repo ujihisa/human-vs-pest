@@ -77,7 +77,7 @@ class Turn
 
     case action
     when :farming
-      @game.world.buildings[player] << Building.new(type: :seeds0, loc: loc)
+      @game.world.buildings[player] << Building.new(id: :seeds0, loc: loc)
     when :spawn_unit
       new_unit = Unit.new(loc: @game.world.buildings.of(player, :base).loc, hp: 8)
       @game.world.unitss[player] << new_unit
@@ -91,15 +91,15 @@ class Turn
   def unit_passive_action!(player, unit)
     opponent = player.opponent
     case @game.world.buildings.at(unit.loc)
-    in [^player, Building(type: :fruits) => b]
-      @messages << "#{player.japanese}: #{b.type}を収穫しました"
+    in [^player, Building(id: :fruits) => b]
+      @messages << "#{player.japanese}: #{b.id}を収穫しました"
       @game.world.buildings.delete_at(unit.loc)
-      @game.world.buildings[player] << b.with(type: :seeds0)
+      @game.world.buildings[player] << b.with(id: :seeds0)
 
       @game.resources[player][:money] = @game.resources[player][:money].add_amount(3)
       @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(1)
     in [^(player.opponent), b]
-      @messages << "#{player.japanese}: #{b.type}を略奪しました"
+      @messages << "#{player.japanese}: #{b.id}を略奪しました"
       @game.resources[player][:money] = @game.resources[player][:money].add_amount(1)
       @game.world.buildings.delete_at(unit.loc)
     else
@@ -122,7 +122,7 @@ class Turn
       @game.world.hexes[loc.y][loc.x] = nil
     when :farming
       @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(-1)
-      @game.world.buildings[player] << Building.new(type: :seeds0, loc: loc)
+      @game.world.buildings[player] << Building.new(id: :seeds0, loc: loc)
     when :melee_attack
       target_unit = @game.world.unitss[player.opponent].find { _1.loc == loc }
       if unit.hp == target_unit.hp

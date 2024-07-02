@@ -1,30 +1,16 @@
 # frozen_string_literal: true
 
-Player = Struct.new(:name, :japanese, :opponent) do
-  alias inspect name
-end
-Human = Player.new('Human', '人間', nil)
-Pest = Player.new('Pest', '害虫', Human)
-Human.opponent = Pest
-
-Building = Data.define(:type, :loc, :hp) do
-  def initialize(type:, loc:, hp: nil)
-    hp ||=
-      case type
-      when :base, :seeds0, :seeds, :flowers, :fruits, :mine, :trail
-        nil
-      when :tree # 未実装
-        3
-      when :rock # 未実装
-        3
-      when :barricade # 未実装
-        3
-      else
-        raise "Unknown Building type: #{type}"
-      end
-    super(type:, loc:, hp:)
+Human = Data.define(:name, :japanese) {
+  def opponent
+    Pest
   end
-end
+}.new('Human', '人間')
+
+Pest = Data.define(:name, :japanese) {
+  def opponent
+    Human
+  end
+}.new('Pest', '害虫')
 
 class World
   # hexes [[Symbol]]
@@ -79,8 +65,8 @@ class World
     }
 
     buildings = {
-      Human => [Building.new(type: :base, loc: bases[:human])],
-      Pest => [Building.new(type: :base, loc: bases[:pest])],
+      Human => [Building.new(id: :base, loc: bases[:human])],
+      Pest => [Building.new(id: :base, loc: bases[:pest])],
     }
     # Returns (Player, Building)
     def buildings.at(loc)
@@ -95,8 +81,8 @@ class World
       end
       raise "Nothing was deleted #{loc}"
     end
-    def buildings.of(player, type)
-      self[player].find { _1.type == type }
+    def buildings.of(player, bid)
+      self[player].find { _1.id == bid }
     end
 
     new(
@@ -168,27 +154,11 @@ class World
       pond: '🌊',
       tree: '🌲',
     }
-    building_table = {
-      Human => {
-        base: '🏠',
-        fruits: '🍓',
-        flowers: '🌷',
-        seeds: '🌱',
-        seeds0: '🌱',
-      },
-      Pest => {
-        base: '🕳',
-        fruits: '🍄',
-        flowers: '🦠',
-        seeds: '🧬',
-        seeds0: '🧬',
-      }
-    }
 
     Array.new(@size_y) {|y|
       Array.new(@size_x) {|x|
         background = environment_table[@hexes[y][x]]
-        background ||= @buildings.at(Location.new(x, y))&.then {|p, b| building_table[p][b.type] }
+        background ||= @buildings.at(Location.new(x, y))&.then {|p, b| b.view(p) }
         background ||= '　'
 
         human = @unitss[Human].find { _1.loc == Location.new(x, y) }
@@ -350,13 +320,13 @@ class GameState
   def tick!
     @world.buildings.each do |_, bs|
       bs.each.with_index do |b, i|
-        case b.type
+        case b.id
         when :seeds0
-          bs[i] = Building.new(type: :seeds, loc: b.loc)
+          bs[i] = Building.new(id: :seeds, loc: b.loc)
         when :seeds
-          bs[i] = Building.new(type: :flowers, loc: b.loc)
+          bs[i] = Building.new(id: :flowers, loc: b.loc)
         when :flowers
-          bs[i] = Building.new(type: :fruits, loc: b.loc)
+          bs[i] = Building.new(id: :fruits, loc: b.loc)
         end
       end
     end
@@ -417,6 +387,7 @@ end
 if __FILE__ == $0
   require_relative 'turn'
   require_relative 'location'
+  require_relative 'building'
 
   turn = Turn.new(
     num: 1,
