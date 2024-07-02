@@ -74,32 +74,25 @@
         <h5><%= player.japanese %></h5>
         <ul class="list-group">
           <li class="list-group-item">
-            お金: <%= game.moneys[player] %>
-            <% if game.cost_to_spawn_unit(player) < game.moneys[player] %>
-              (拠点をクリックするとユニット生産のメニューが出てきます)
-            <% end %>
-          </li>
-          <li class="list-group-item">
             資源:
-            <%= game.resources[player].values.map { _1.emoji * _1.amount }.join('') %>
+            <%= game.resources[player].values.map { _1.resource.emoji * _1.amount }.join('') %>
           </li>
-          <li class="list-group-item">
-            <button
-                class="btn btn-secondary"
-                <%= 'disabled' if game.cost_to_spawn_unit(player) > game.moneys[player] || completed[player] || game.winner %>
-                type="submit">
-              農業
-            </button>
-          </li>
-          <li class="list-group-item">
-            <button
-                class="btn btn-secondary"
-                <%= 'disabled' if game.cost_to_spawn_unit(player) > game.moneys[player] || completed[player] || game.winner %>
-                type="submit">
-              ユニット生産
-            </button>
-            コスト: お金<%= game.cost_to_spawn_unit(player) %> (倍々に増えていきます)
-          </li>
+          <% menu_actionable_actions = turn.menu_actionable_actions(player) %>
+          <% Turn::MENU_ACTIONS.at(game, player).each do |k, v| %>
+            <li class="list-group-item">
+              <button
+                  class="btn btn-secondary"
+                  <%= 'disabled' if !menu_actionable_actions.keys.include?(k) %>
+                  type="submit">
+                <%= v[:japanese] %>
+                <small>
+                  <% v[:cost].each do |k, amount| %>
+                    <%= "#{RESOURCES[k].emoji}" * amount %>
+                  <% end %>
+                </small>
+              </button>
+            </li>
+          <% end %>
           <li class="list-group-item">
             <div class="d-grid gap-2 col-6 mx-auto">
               <button

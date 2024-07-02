@@ -21,26 +21,37 @@ class Turn
   end
 
   MENU_ACTIONS = {
-    #                 :japanese          :consume      :valid_location_type
-    farming:         ['農業',            { seed: 1 },  :unit],
-    build_trail:     ['建設/小道',       { wood: 1 },  :unit],
-    build_barricade: ['建設/バリケード', { wood: 2 },  :unit],
-    build_landmine:  ['建設/地雷',       { ore: 3 },   :unit],
+    #                 :japanese          :cost          :location_type
+    farming:         ['農業',            { seed: 1 },   :unit],
+    build_trail:     ['建設/小道',       { wood: 1 },   :unit],
+    build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
+    build_landmine:  ['建設/地雷',       { ore: 3 },    :unit],
     spawn_unit:      ['ユニット生産',    { money: :f }, :base],
-  }.transform_values {|a, b, c| { japanese: a, consume: b, valid_location_type: c } }
+  }.transform_values {|a, b, c| { japanese: a, cost: b, location_type: c } }
+  def MENU_ACTIONS.at(game, player)
+    transform_values {|v|
+      cost = v[:cost].transform_values {|amount|
+        if amount == :f
+          amount = game.cost_to_spawn_unit(player)
+        else
+          amount
+        end
+      }
+      v.merge(cost: cost)
+    }
+  end
+  MENU_ACTIONS.freeze
+
   # { Symbol => [Location] }
   def menu_actionable_actions(player)
     return [] if @game.winner
 
-    MENU_ACTIONS.select {|_, hash|
-      hash[:consume].all? {|k, v|
-        if v == :f
-          v = @game.cost_to_spawn_unit(player)
-        end
-        @game.resources[player][k].amount >= v
+    MENU_ACTIONS.at(@game, player).select {|_, hash|
+      hash[:cost].all? {|k, amount|
+        @game.resources[player][k].amount >= amount
       }
     }.transform_values {|v|
-      case v[:valid_location_type]
+      case v[:location_type]
       when :unit
         @game.world.unitss[player].map(&:loc).select {|loc|
           @game.world.buildings.at(loc).nil?
@@ -50,7 +61,7 @@ class Turn
           !@game.world.unitss[player].map(&:loc).include?(loc)
         }
       else
-        raise "Invalid :valid_location_type: #{v[:valid_location_type]}"
+        raise "Invalid :location_type: #{v[:location_type]}"
       end
     }.reject {|k, locs|
       locs.empty?

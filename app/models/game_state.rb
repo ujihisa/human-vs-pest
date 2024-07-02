@@ -258,9 +258,18 @@ class Unit
   end
 end
 
-Resource = Data.define(:emoji, :amount) do
+Resource = Data.define(:id, :emoji)
+RESOURCES = {
+  seed: Resource.new(id: :seed, emoji: '🌱'),
+  wood: Resource.new(id: :wood, emoji: '🪵'),
+  ore: Resource.new(id: :ore, emoji: '🪨'),
+  money: Resource.new(id: :money, emoji: '💰'),
+}.freeze
+
+
+PlayerResource = Data.define(:resource, :amount) do
   def add_amount(n)
-    self.class.new(emoji: emoji, amount: amount + n)
+    self.class.new(resource: resource, amount: amount + n)
   end
 end
 
@@ -269,25 +278,21 @@ class GameState
     @world = world
     @resources = {
       Human => {
-        seed: Resource.new(emoji: '🌱', amount: 1),
-        wood: Resource.new(emoji: '🪵', amount: 0),
-        ore: Resource.new(emoji: '🪨', amount: 0),
-        money: Resource.new(emoji: '💰', amount: 0),
+        seed: PlayerResource.new(resource: RESOURCES[:seed], amount: 1),
+        wood: PlayerResource.new(resource: RESOURCES[:wood] , amount: 0),
+        ore: PlayerResource.new(resource: RESOURCES[:ore], amount: 0),
+        money: PlayerResource.new(resource: RESOURCES[:money], amount: 0),
       },
       Pest => {
-        seed: Resource.new(emoji: '🌱', amount: 1),
-        wood: Resource.new(emoji: '🪵', amount: 0),
-        ore: Resource.new(emoji: '🪨', amount: 0),
-        money: Resource.new(emoji: '💰', amount: 0),
+        seed: PlayerResource.new(resource: RESOURCES[:seed], amount: 1),
+        wood: PlayerResource.new(resource: RESOURCES[:wood] , amount: 0),
+        ore: PlayerResource.new(resource: RESOURCES[:ore], amount: 0),
+        money: PlayerResource.new(resource: RESOURCES[:money], amount: 0),
       }
-    }
-    @moneys = {
-      Human => 0,
-      Pest => 0,
     }
     @total_spawned_units = { Human => 1, Pest => 1 }
   end
-  attr_reader :world, :resources, :moneys, :turn, :total_spawned_units
+  attr_reader :world, :resources, :turn, :total_spawned_units
 
   # Returns `nil` if the game is still ongoing
   def winner
@@ -306,88 +311,84 @@ class GameState
   end
 
   def menu_action!(player, action, loc)
-    Turn::MENU_ACTIONS[action][:consume].each do |k, v|
-      if v == :f
-        v = cost_to_spawn_unit(player)
+    Turn::MENU_ACTIONS.at(self, player)[action][:cost].each do |k, amount|
+      @resources[player][k] = @resources[player][k].add_amount(-amount)
+    end
+
+    case action
+    when :farming
+      @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
+    when :spawn_unit
+      new_unit = Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
+      @world.unitss[player] << new_unit
+      @total_spawned_units[player] += 1
+    else
+      p "Not implemented yet: #{action}"
+    end
+  end
+
+  # returns nil | String
+  def reason_building_action(player, building)
+    return nil if self.winner
+
+    case building.type
+    when :base
+      cost = cost_to_spawn_unit(player)
+      if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(building.loc)
+        'ユニット生産'
       end
-    @resources[player][k] = @resources[player][k].add_amount(-v)
-  end
-
-  case action
-  when :farming
-    @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
-  when :spawn_unit
-    new_unit = Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
-    @world.unitss[player] << new_unit
-    @total_spawned_units[player] += 1
-  else
-    p "Not implemented yet: #{action}"
-  end
-end
-
-# returns nil | String
-def reason_building_action(player, building)
-  return nil if self.winner
-
-  case building.type
-  when :base
-    cost = cost_to_spawn_unit(player)
-    if @moneys[player] >= cost && !@world.unitss[player].map(&:loc).include?(building.loc)
-      'ユニット生産'
-    end
-  else
-    false
-  end
-end
-
-# nil | Symbol
-def reason_unit_action(player, unit, loc)
-  return nil if self.winner
-
-  if 2 < unit.hp
-    if @world.unitss[player.opponent].find { loc == _1.loc }
-      return :melee_attack
+    else
+      false
     end
   end
 
-  if unit.moveable(world: @world).include?(loc)
-    return :move
+  # nil | Symbol
+  def reason_unit_action(player, unit, loc)
+    return nil if self.winner
+
+    if 2 < unit.hp
+      if @world.unitss[player.opponent].find { loc == _1.loc }
+        return :melee_attack
+      end
+    end
+
+    if unit.moveable(world: @world).include?(loc)
+      return :move
+    end
+
+    nil
   end
 
-  nil
-end
+  private def vacant?(loc)
+    if @world.hex_at(loc)
+      return false
+    end
 
-private def vacant?(loc)
-  if @world.hex_at(loc)
-    return false
+    @world.buildings.at(loc).nil?
   end
 
-  @world.buildings.at(loc).nil?
-end
-
-def tick!
-  @world.buildings.each do |_, bs|
-    bs.each.with_index do |b, i|
-      case b.type
-      when :seeds0
-        bs[i] = Building.new(type: :seeds, loc: b.loc)
-      when :seeds
-        bs[i] = Building.new(type: :flowers, loc: b.loc)
-      when :flowers
-        bs[i] = Building.new(type: :fruits, loc: b.loc)
+  def tick!
+    @world.buildings.each do |_, bs|
+      bs.each.with_index do |b, i|
+        case b.type
+        when :seeds0
+          bs[i] = Building.new(type: :seeds, loc: b.loc)
+        when :seeds
+          bs[i] = Building.new(type: :flowers, loc: b.loc)
+        when :flowers
+          bs[i] = Building.new(type: :fruits, loc: b.loc)
+        end
       end
     end
   end
-end
 
-def draw
-  p(
-    moneys: @moneys,
-    resources: @resources.transform_values {|rs| rs.values.map(&:amount) },
-    # num_units: @world.unitss.transform_values(&:size),
-  )
-  @world.draw
-end
+  def draw
+    p(
+      resources: @resources.transform_values {|rs| rs.values.map(&:amount) },
+      # num_units: @world.unitss.transform_values(&:size),
+    )
+    @world.draw
+  end
 end
 
 module AI
