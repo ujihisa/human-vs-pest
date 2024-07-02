@@ -6,10 +6,9 @@ class Turn
     @game = game
 
     @actionable_units = @game.world.unitss.transform_values(&:dup).dup
-    @actionable_buildings = @game.world.buildings.transform_values(&:dup).dup
     @messages = []
   end
-  attr_reader :num, :game, :actionable_units, :actionable_buildings, :messages
+  attr_reader :num, :game, :actionable_units, :messages
 
   # neighbours系actionのみ
   def unit_actionable_locs(player, unit)
@@ -21,23 +20,35 @@ class Turn
     locs.select {|loc| !!@game.reason_unit_action(player, unit, loc) }
   end
 
-  # 現在位置のみ
-  def unit_actionable_actions(player, unit)
+  MENU_ACTIONS = {
+    farming:         { japanese: '農業',            consume: { seed: 1 }, valid_location_type: :unit },
+    build_trail:     { japanese: '建設/小道',       consume: { wood: 1 }, valid_location_type: :unit },
+    build_barricade: { japanese: '建設/バリケード', consume: { wood: 2 }, valid_location_type: :unit },
+    build_landmine:  { japanese: '建設/地雷',       consume: { ore: 3 }, valid_location_type: :unit },
+    spawn_unit:      { japanese: 'ユニット生産',    consume: { money: 1 }, valid_location_type: :base }, # TODO: 金額を可変に
+  }
+  # { Symbol => [Location] }
+  def menu_actionable_actions(player)
     return [] if @game.winner
-    return [] if !@actionable_units[player].include?(unit)
 
-    actions = []
-    if @game.world.hex_at(unit.loc) == :tree
-      actions << :harvest_woods
-    else
-      (owner, b) = @game.world.buildings.at(unit.loc)
-
-      if b.nil?
-        actions << :farming
+    MENU_ACTIONS.select {|_, hash|
+      hash[:consume].all? {|k, v| @game.resources[player][k].amount >= v }
+    }.transform_values {|v|
+      case v[:valid_location_type]
+      when :unit
+        @game.world.unitss[player].map(&:loc).select {|loc|
+          @game.world.buildings.at(loc).nil?
+        }
+      when :base
+        [@game.world.buildings.of(player, :base).loc].select {|loc|
+          !@game.world.unitss[player].map(&:loc).include?(loc)
+        }
+      else
+        raise "Invalid :valid_location_type: #{v[:valid_location_type]}"
       end
-    end
-
-    actions
+    }.reject {|k, locs|
+      locs.empty?
+    }.to_h
   end
 
   def building_action!(player, building)
@@ -52,7 +63,6 @@ class Turn
 
       @actionable_units[player] += [new_unit]
     end
-    @actionable_buildings[player] -= [building]
   end
 
 
@@ -72,7 +82,8 @@ class Turn
       in [^player, Building(type: :fruits)]
         @messages << "#{player.japanese}: ついでにそのまま収穫しました"
         @game.world.buildings.delete_at(loc)
-        @game.moneys[player] += 3
+        @game.resources[player][:money] = @game.resources[player][:money].add_amount(3)
+        @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(2)
       in [^(player.opponent), b]
         @messages << "#{player.japanese}: ついでにそのまま#{b.type}を略奪しました"
         @game.world.buildings.delete_at(loc)
@@ -80,9 +91,10 @@ class Turn
         # do nothing
       end
     when :harvest_woods
-      @game.woods[player] += 3
+      @game.resources[player][:wood] = @game.resources[player][:wood].add_amount(3)
       @game.world.hexes[loc.y][loc.x] = nil
     when :farming
+      @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(-1)
       @game.world.buildings[player] << Building.new(type: :seeds0, loc: loc)
     when :melee_attack
       target_unit = @game.world.unitss[player.opponent].find { _1.loc == loc }

@@ -29,13 +29,6 @@
             <%= hexes_view[y][x] %>
           </nobr>
         </div>
-        <% if turn.actionable_units[Human].find { _1.loc == loc } or
-            turn.actionable_buildings[Human].find { game.reason_building_action(Human, _1) && _1.loc == loc }
-          %>
-          <div class="hex size64">
-            *
-          </div>
-        <% end %>
         <% if human = game.world.unitss[Human].find { loc == _1.loc } %>
           <div class="hex" style="font-size: 32px;">
             🧍
@@ -46,14 +39,7 @@
         <% end %>
         <% case human_focus
            when Unit %>
-          <% if loc == human_focus.loc and actions = turn.unit_actionable_actions(Human, human_focus) and actions.present? %>
-            <div class="hex size64">
-              <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
-            </div>
-            <div class="hex" style="font-size: 16px;">
-              <%= actions.join(', ') %>
-            </div>
-          <% elsif turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
+          <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
             <div class="hex size64">
               <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>
@@ -94,7 +80,8 @@
             <% end %>
           </li>
           <li class="list-group-item">
-            木材: <%= game.woods[player] %> (※用途は未実装なので今は無視してOK)
+            資源:
+            <%= game.resources[player].values.map { _1.emoji * _1.amount }.join('') %>
           </li>
           <li class="list-group-item">
             <button

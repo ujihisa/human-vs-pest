@@ -33,15 +33,14 @@ class WorldTag < Live::View
           sleep 2
 
           player = Pest
-          @@turn.actionable_buildings[player].each do |b|
-            @@turn.building_action!(player, b) if @@game.reason_building_action(player, b)
+          while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
+            @@game.menu_action!(player, action, locs.sample)
           end
           sleep 1
 
           @@turn.actionable_units[player].each do |u|
             locs = @@turn.unit_actionable_locs(player, u)
-            actions = @@turn.unit_actionable_actions(player, u)
-            ua = AI.unit_action_for(@@game, player, u, locs, actions)
+            ua = AI.unit_action_for(@@game, player, u, locs)
             @@turn.unit_action!(player, u, ua.first, ua.last) if ua
           end
           @@completed[player] = true
@@ -85,16 +84,16 @@ class WorldTag < Live::View
         end
         @@human_focus = nil
       when Building
-        b = @@turn.actionable_buildings[Human].find { _1.loc == loc }
-        @@turn.building_action!(Human, b) if @@game.reason_building_action(Human, b)
-        @@human_focus = nil
+        # b = @@turn.actionable_buildings[Human].find { _1.loc == loc }
+        # @@turn.building_action!(Human, b) if @@game.reason_building_action(Human, b)
+        # @@human_focus = nil
       else # nil
         if human = @@turn.actionable_units[Human].find { _1.loc == loc }
           @@human_focus = human
         else
-          if b = @@turn.actionable_buildings[Human].find { _1.loc == loc }
-            @@human_focus = b if @@game.reason_building_action(Human, b)
-          end
+          # if b = @@turn.actionable_buildings[Human].find { _1.loc == loc }
+          #   @@human_focus = b if @@game.reason_building_action(Human, b)
+          # end
         end
       end
       update!
@@ -128,15 +127,14 @@ class WorldTag < Live::View
         players = [Human, Pest]
         loop do
           players.each do |player|
-            @@turn.actionable_buildings[player].each do |b|
-              @@turn.building_action!(player, b) if @@game.reason_building_action(player, b)
+            while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
+              @@game.menu_action!(player, action, locs.sample)
             end
             update!; sleep 0.1
 
             @@turn.actionable_units[player].each do |u|
               locs = @@turn.unit_actionable_locs(player, u)
-              actions = @@turn.unit_actionable_actions(player, u)
-              ua = AI.unit_action_for(@@game, player, u, locs, actions)
+              ua = AI.unit_action_for(@@game, player, u, locs)
               @@turn.unit_action!(player, u, ua.first, ua.last) if ua
             end
             update!; sleep 0.1

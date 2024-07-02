@@ -117,11 +117,6 @@ class World
     @hexes[loc.y][loc.x]
   end
 
-  # neighboursとほぼ同じだが、隣接するだけでなく、自分自身も含む
-  def reachable(loc)
-    [loc, *neighbours(loc)]
-  end
-
   def neighbours(loc)
     raise "Missing loc" unless loc
 
@@ -263,20 +258,36 @@ class Unit
   end
 end
 
+Resource = Data.define(:emoji, :amount) do
+  def add_amount(n)
+    self.class.new(emoji: emoji, amount: amount + n)
+  end
+end
+
 class GameState
   def initialize(world:)
     @world = world
-    @moneys = {
-      Human => 0,
-      Pest => 0,
+    @resources = {
+      Human => {
+        seed: Resource.new(emoji: '🌱', amount: 1),
+        wood: Resource.new(emoji: '🪵', amount: 0),
+        ore: Resource.new(emoji: '🪨', amount: 0),
+        money: Resource.new(emoji: '💰', amount: 0),
+      },
+      Pest => {
+        seed: Resource.new(emoji: '🌱', amount: 1),
+        wood: Resource.new(emoji: '🪵', amount: 0),
+        ore: Resource.new(emoji: '🪨', amount: 0),
+        money: Resource.new(emoji: '💰', amount: 0),
+      }
     }
-    @woods = {
+    @moneys = {
       Human => 0,
       Pest => 0,
     }
     @total_spawned_units = { Human => 1, Pest => 1 }
   end
-  attr_reader :world, :moneys, :woods, :turn, :total_spawned_units
+  attr_reader :world, :resources, :moneys, :turn, :total_spawned_units
 
   # Returns `nil` if the game is still ongoing
   def winner
@@ -292,6 +303,23 @@ class GameState
   # (1), 2, 4, 8, 16, ...
   def cost_to_spawn_unit(player)
     2 ** @total_spawned_units[player]
+  end
+
+  def menu_action!(player, action, loc)
+    Turn::MENU_ACTIONS[action][:consume].each do |k, v|
+      @resources[player][k] = @resources[player][k].add_amount(-v)
+    end
+
+    case action
+    when :farming
+      @world.buildings[player] << Building.new(type: :seeds0, loc: loc)
+    when :spawn_unit
+      new_unit = Unit.new(loc: @world.buildings.of(player, :base).loc, hp: 8)
+      @world.unitss[player] << new_unit
+      @total_spawned_units[player] += 1
+    else
+      p "Not implemented yet: #{action}"
+    end
   end
 
   # returns nil | String
@@ -352,7 +380,7 @@ class GameState
   def draw
     p(
       moneys: @moneys,
-      woods: @woods,
+      resources: @resources.transform_values {|rs| rs.values.map(&:amount) },
       # num_units: @world.unitss.transform_values(&:size),
     )
     @world.draw
@@ -361,16 +389,15 @@ end
 
 module AI
   # [Location, Symbol] | nil
-  def self.unit_action_for(game, player, u, locs, actions)
+  def self.unit_action_for(game, player, u, locs)
     uas = locs.map {|loc| [loc, game.reason_unit_action(player, u, loc)] }
-    uas += actions.map { [u.loc, _1] }
 
     # セルフケア最優先
     if u.hp < 3
       return nil
     end
 
-    # 次いで破壊と近接攻撃
+    # 次いで近接攻撃
     if ua = uas.find { [:melee_attack].include?(_1[1]) }
       return ua
     end
@@ -417,14 +444,13 @@ if __FILE__ == $0
   players = [Human, Pest]
   loop do
     players.each do |player|
-      turn.actionable_buildings[player].each do |b|
-        turn.building_action!(player, b) if game.reason_building_action(player, b)
+      while ((action, locs) = turn.menu_actionable_actions(player).first) # TODO: sample
+        game.menu_action!(player, action, locs.sample)
       end
 
       turn.actionable_units[player].each do |u|
         locs = turn.unit_actionable_locs(player, u)
-        actions = turn.unit_actionable_actions(player, u)
-        ua = AI.unit_action_for(game, player, u, locs, actions)
+        ua = AI.unit_action_for(game, player, u, locs)
         turn.unit_action!(player, u, ua.first, ua.last) if ua
       end
     end
