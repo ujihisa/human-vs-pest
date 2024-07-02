@@ -123,13 +123,23 @@ class Turn
       @game.world.buildings[player] << Building.new(type: :seeds0, loc: loc)
     when :melee_attack
       target_unit = @game.world.unitss[player.opponent].find { _1.loc == loc }
-      target_unit.hp -= 4
-
-      if target_unit.dead?
-        @game.world.unitss[player.opponent].delete(target_unit)
+      if unit.hp == target_unit.hp
+        unit.hp = 1
+        target_unit.hp = 1
+      else
+        damage = (unit.hp - target_unit.hp).abs
+        unit.hp -= damage
+        target_unit.hp -= damage
       end
 
-      unit.hp -= 2
+      if unit.dead?
+        @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが死亡しました"
+        @game.world.unitss[player].delete(unit)
+      end
+      if target_unit.dead?
+        @messages << "#{player.opponent.japanese}: #{target_unit.loc.inspect}にいるユニットが死亡しました"
+        @game.world.unitss[player.opponent].delete(target_unit)
+      end
     end
 
     @actionable_units[player] -= [unit]

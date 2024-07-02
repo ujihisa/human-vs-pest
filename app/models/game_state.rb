@@ -267,9 +267,21 @@ RESOURCES = {
 }.freeze
 
 
-PlayerResource = Data.define(:resource, :amount) do
+PlayerResource = Data.define(:resource_id, :amount) do
+  def resource
+    RESOURCES[resource_id]
+  end
+
   def add_amount(n)
-    self.class.new(resource: resource, amount: amount + n)
+    self.class.new(resource_id: resource_id, amount: amount + n)
+  end
+
+  def view
+    if 5 < amount
+      "#{resource.emoji}x#{amount}"
+    else
+      "#{resource.emoji}" * amount
+    end
   end
 end
 
@@ -278,16 +290,16 @@ class GameState
     @world = world
     @resources = {
       Human => {
-        seed: PlayerResource.new(resource: RESOURCES[:seed], amount: 1),
-        wood: PlayerResource.new(resource: RESOURCES[:wood] , amount: 0),
-        ore: PlayerResource.new(resource: RESOURCES[:ore], amount: 0),
-        money: PlayerResource.new(resource: RESOURCES[:money], amount: 0),
+        seed: PlayerResource.new(resource_id: :seed, amount: 1),
+        wood: PlayerResource.new(resource_id: :wood , amount: 0),
+        ore: PlayerResource.new(resource_id: :ore, amount: 0),
+        money: PlayerResource.new(resource_id: :money, amount: 0),
       },
       Pest => {
-        seed: PlayerResource.new(resource: RESOURCES[:seed], amount: 1),
-        wood: PlayerResource.new(resource: RESOURCES[:wood] , amount: 0),
-        ore: PlayerResource.new(resource: RESOURCES[:ore], amount: 0),
-        money: PlayerResource.new(resource: RESOURCES[:money], amount: 0),
+        seed: PlayerResource.new(resource_id: :seed, amount: 1),
+        wood: PlayerResource.new(resource_id: :wood , amount: 0),
+        ore: PlayerResource.new(resource_id: :ore, amount: 0),
+        money: PlayerResource.new(resource_id: :money, amount: 0),
       }
     }
     @total_spawned_units = { Human => 1, Pest => 1 }
@@ -314,7 +326,7 @@ class GameState
   def reason_unit_action(player, unit, loc)
     return nil if self.winner
 
-    if 2 < unit.hp
+    if 1 < unit.hp
       if @world.unitss[player.opponent].find { loc == _1.loc }
         return :melee_attack
       end

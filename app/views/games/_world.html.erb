@@ -86,7 +86,7 @@
         <ul class="list-group">
           <li class="list-group-item">
             資源:
-            <%= game.resources[player].values.map { _1.resource.emoji * _1.amount }.join('') %>
+            <%= game.resources[player].values.map { _1.view }.join('') %>
           </li>
           <% menu_actionable_actions = turn.menu_actionable_actions(player) %>
           <li class="list-group-item">
@@ -104,7 +104,7 @@
                 <div class="col">
                   <small>
                     <% v.cost.each do |k, amount| %>
-                      <%= "#{RESOURCES[k].emoji}" * amount %>
+                      <%= PlayerResource.new(resource_id: k, amount: amount).view %>
                     <% end %>
                   </small>
                 </div>
