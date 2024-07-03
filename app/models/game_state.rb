@@ -55,7 +55,7 @@ class World
   # size_x Integer
   # size_y Integer
   # unitss {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
-  # buildings {Human => [Building], ...}
+  # buildings {human: [Building], ...}
   def initialize(size_x:, size_y:, unitss:, buildings:)
     @size_x = size_x
     @size_y = size_y
@@ -76,13 +76,13 @@ class World
     ponds = vacant_locs.shift(size_x * size_y / 10)
 
     buildings = {
-      Human => [
+      human: [
         Building.new(player: Human, id: :base, loc: bases[:human]),
       ],
-      Pest => [
+      pest: [
         Building.new(player: Pest, id: :base, loc: bases[:pest]),
       ],
-      :world => [
+      world: [
         *trees.map { Building.new(player: :world, id: :tree, loc: _1) },
         *ponds.map { Building.new(player: :world, id: :pond, loc: _1) },
       ]
@@ -98,8 +98,7 @@ class World
       raise "Nothing was deleted #{loc}"
     end
     def buildings.of(player_id, bid)
-      player = Player.find(player_id)
-      self[player].find { _1.id == bid }
+      self[player_id].find { _1.id == bid }
     end
 
     new(

@@ -11,7 +11,7 @@ Unit = Struct.new(:player_id, :loc, :hp) do
 
   # TODO: 拠点との移動距離に依存する
   def max_hp(world)
-    base = world.buildings[Player.find(player_id)].find { _1.id == :base }
+    base = world.buildings[player_id].find { _1.id == :base }
     [
       8 - world.move_distance(player_id, base.loc, loc),
       1,

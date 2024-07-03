@@ -83,10 +83,10 @@ class Turn
       end
 
       @messages << "#{player.japanese}: #{loc.inspect}で農業をしました"
-      @game.world.buildings[player] << Building.new(player: player, id: :seeds0, loc: loc)
+      @game.world.buildings[player.id] << Building.new(player: player, id: :seeds0, loc: loc)
     when :build_trail
       @messages << "#{player.japanese}: #{loc.inspect}に小道を建設しました"
-      @game.world.buildings[player] << Building.new(player: player, id: :trail, loc: loc)
+      @game.world.buildings[player.id] << Building.new(player: player, id: :trail, loc: loc)
     when :spawn_unit
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
@@ -105,7 +105,7 @@ class Turn
     in Building(player: ^player, id: :fruits) => b
       @messages << "#{player.japanese}: #{b.id}を収穫しました"
       @game.world.buildings.delete_at(unit.loc)
-      @game.world.buildings[player] << b.with(id: :seeds0)
+      @game.world.buildings[player.id] << b.with(id: :seeds0)
 
       @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(1)
@@ -136,11 +136,11 @@ class Turn
 
       @game.world.buildings.delete_at(loc)
       if 1 < building.hp
-        @game.world.buildings[player] << building.with(hp: building.hp - 1)
+        @game.world.buildings[player.id] << building.with(hp: building.hp - 1)
       end
     when :farming
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(-1)
-      @game.world.buildings[player] << Building.new(player: player, id: :seeds0, loc: loc)
+      @game.world.buildings[player.id] << Building.new(player: player, id: :seeds0, loc: loc)
     when :melee_attack
       target_unit = @game.world.unitss[player.opponent.id].find { _1.loc == loc }
       if unit.hp == target_unit.hp
