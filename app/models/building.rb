@@ -1,45 +1,39 @@
 # frozen_string_literal: true
 
 Building = Data.define(:player, :id, :loc, :hp) do
-  DEFAULT_BUILDING_HP = {
-    tree: -> { rand(1..3) },
-    rock: -> { rand(5..9) },
-    barricade: -> { 8 },
+  BuildingDefault = Data.define(:id, :human_emoji, :pest_emoji, :passable, :hp_f)
+  BUILDING_DEFAULTS = {
+    tree: BuildingDefault.new(:tree, '🌲', '🌲', false, -> { rand(1..3) }),
+    rock: BuildingDefault.new(:rock, '🪨', '🪨', false, -> { rand(5..9) }),
+    barricade: BuildingDefault.new(:barricade, '🚧', '🕸', false, -> { 8 }),
+    pond: BuildingDefault.new(:pond, '🌊', '🌊', false, -> { nil }),
+    base: BuildingDefault.new(:base, '🏠', '🕳', true, -> { nil }),
+    fruits: BuildingDefault.new(:fruits, '🍓', '🍄', true, -> { nil }),
+    flowers: BuildingDefault.new(:flowers, '🌷', '🦠', true, -> { nil }),
+    seeds: BuildingDefault.new(:seeds, '🌱', '🧬', true, -> { nil }),
+    seeds0: BuildingDefault.new(:seeds0, '🌱', '🧬', true, -> { nil }),
+    trail: BuildingDefault.new(:trail, '🛤', '🛤', true, -> { nil }),
   }
   def initialize(id:, player:, loc:, hp: nil)
-    hp ||= DEFAULT_BUILDING_HP[id]&.call
+    hp ||= BUILDING_DEFAULTS.fetch(id).hp_f.()
     super(player:, id:, loc:, hp:)
   end
 
   # ownerは無条件で通行可能なので、ownerでないと仮定する
   def passable?
-    ![:tree, :pond, :rock, :barricade].include?(id)
+    BUILDING_DEFAULTS.fetch(id).passable
   end
 
   def view
-    building_table = {
-      Human => {
-        base: '🏠',
-        fruits: '🍓',
-        flowers: '🌷',
-        seeds: '🌱',
-        seeds0: '🌱',
-        trail: '🛤',
-      },
-      Pest => {
-        base: '🕳',
-        fruits: '🍄',
-        flowers: '🦠',
-        seeds: '🧬',
-        seeds0: '🧬',
-        trail: '🛤',
-      },
-      :world => {
-        tree: '🌲',
-        pond: '🌊',
-      },
-    }
-    building_table[player][id]
+    bd = BUILDING_DEFAULTS.fetch(id)
+    case player
+    when Human, :world
+      bd.human_emoji
+    when Pest
+      bd.pest_emoji
+    else
+      raise "Must not happen: invalid player #{player}"
+    end
   end
 
   def background_img
