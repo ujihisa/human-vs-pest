@@ -105,8 +105,8 @@ class World
       size_x: size_x,
       size_y: size_y,
       unitss: {
-        Human => [Unit.new(player_id: :human, loc: bases[:human], hp: 8)],
-        Pest => [Unit.new(player_id: :pest, loc: bases[:pest], hp: 8)],
+        Human => [Unit.new(player_id: :human, loc: bases[:human])],
+        Pest => [Unit.new(player_id: :pest, loc: bases[:pest])],
       },
       buildings: buildings,
     )

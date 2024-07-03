@@ -1,8 +1,18 @@
 # frozen_string_literal: true
 
 Unit = Struct.new(:player_id, :loc, :hp) do
+  def initialize(player_id:, loc:)
+    super(player_id, loc)
+    self.hp = max_hp()
+  end
+
   def player
     Player.find(player_id)
+  end
+
+  # TODO: 拠点との移動距離に依存する
+  def max_hp
+    8
   end
 
   # returns [(Integer, Integer)]

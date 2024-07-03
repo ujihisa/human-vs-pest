@@ -90,7 +90,7 @@ class Turn
     when :spawn_unit
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
-      new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player, :base).loc, hp: 8)
+      new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player, :base).loc)
       @game.world.unitss[player] << new_unit
       @game.total_spawned_units[player] += 1
       @actionable_units[player.id] += [new_unit]
@@ -183,7 +183,7 @@ class Turn
         player = Player.find(player_id)
         units.each do |u|
           @messages << "#{player.japanese}: #{u.loc.inspect}にいるユニットが回復しました"
-          u.hp = [u.hp + 3, 8].min
+          u.hp = [u.hp + 3, u.max_hp].min
         end
       end
       @game.tick!
