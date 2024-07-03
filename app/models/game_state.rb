@@ -60,6 +60,21 @@ class World
     @size_x = size_x
     @size_y = size_y
     @unitss = unitss
+
+    # Returns Building
+    def buildings.at(loc)
+      self.values.flatten(1).find { _1.loc == loc }
+    end
+    def buildings.delete_at(loc)
+      self.each do |_, bs|
+        return if bs.reject! { _1.loc == loc }
+      end
+      raise "Nothing was deleted #{loc}"
+    end
+    def buildings.of(player_id, bid)
+      self[player_id].find { _1.id == bid }
+    end
+
     @buildings = buildings
   end
   attr_reader :size_x, :size_y, :unitss, :buildings
@@ -87,20 +102,6 @@ class World
         *ponds.map { Building.new(player: :world, id: :pond, loc: _1) },
       ]
     }
-    # Returns Building
-    def buildings.at(loc)
-      self.values.flatten(1).find { _1.loc == loc }
-    end
-    def buildings.delete_at(loc)
-      self.each do |_, bs|
-        return if bs.reject! { _1.loc == loc }
-      end
-      raise "Nothing was deleted #{loc}"
-    end
-    def buildings.of(player_id, bid)
-      self[player_id].find { _1.id == bid }
-    end
-
     new(
       size_x: size_x,
       size_y: size_y,
