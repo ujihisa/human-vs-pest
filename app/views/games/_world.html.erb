@@ -51,9 +51,9 @@
           <% if human_focus  %>
             <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
               <div class="hex size64">
-                <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
+                <%= ActionController::Base.helpers.image_tag("backgrounds/unit_actionable.png", style: 'height: 64px; width: 64px;') %>
               </div>
-              <div class="hex" style="font-size: 16px;">
+              <div class="hex text-nowrap" style="font-size: 16px;">
                 <%= UnitAction.reason(game, human_focus, loc).japanese %>
               </div>
             <% end %>
@@ -61,9 +61,9 @@
 
           <% if menu_actionable_locs.include?(loc) %>
             <div class="hex" style="font-size: 32px;">
-              <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
+              <%= ActionController::Base.helpers.image_tag("backgrounds/menu_actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>
-            <div class="hex" style="font-size: 16px;">
+            <div class="hex text-nowrap" style="font-size: 16px;">
               <%= menu_action.japanese %>
             </div>
           <% end %>
