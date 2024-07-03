@@ -2,7 +2,9 @@
 
 <%= render @game %>
 
-<%= @world_tag.to_html %>
+<div class="container text-center">
+  <%= @world_tag.to_html %>
+</div>
 
 <div>
   <%= link_to "Back to games", games_path %>

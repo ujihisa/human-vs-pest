@@ -56,10 +56,10 @@ class Turn
       when :unit
         @game.world.unitss[player].map(&:loc).select {|loc|
           # 自分の拠点だけは壊せない
-          @game.world.buildings.of(player, :base).loc != loc
+          @game.world.buildings.of(player.id, :base).loc != loc
         }
       when :base
-        [@game.world.buildings.of(player, :base).loc].select {|loc|
+        [@game.world.buildings.of(player.id, :base).loc].select {|loc|
           !@game.world.unitss[player].map(&:loc).include?(loc)
         }
       else
@@ -90,7 +90,7 @@ class Turn
     when :spawn_unit
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
-      new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player, :base).loc)
+      new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player.id, :base).loc)
       @game.world.unitss[player] << new_unit
       @game.total_spawned_units[player] += 1
       @actionable_units[player.id] += [new_unit]

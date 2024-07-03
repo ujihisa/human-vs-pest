@@ -7,73 +7,78 @@
 </script>
 
 <% menu_actionable_locs = menu_action ? turn.menu_actionable_actions(Human).fetch(menu_action.id, []) : [] %>
-<div style="height: 640px; width: 480px; margin: auto; border: solid 0px black">
-  <% if game.winner %>
-    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
-      <%= game.winner.japanese %>の勝ち
-    </div>
-  <% end %>
+<div class="row">
+  <div class="col-4">
+    ここにヒントとかfocusしてるものの詳細が表示される予定
+  </div>
+  <div class="col-4">
+    <% if game.winner %>
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
+        <%= game.winner.japanese %>の勝ち
+      </div>
+    <% end %>
 
-  <% hexes_view.each_with_index do |hexes_y, y| %>
-    <% hexes_y.each_with_index do |_, x| %>
-      <% loc = Location.new(x, y) %>
-      <% building = game.world.buildings.at(loc) %>
-      <% background_img = building&.background_img %>
-      <% padding_top = x.even? ? 64*y : 64*y + 32 %>
-      <% padding_left = 48*x %>
-      <div
-          style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_left %>px 0px; user-select: none;"
-          onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});"
-          oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
-          >
-        <div class="hex size64">
-          <%= ActionController::Base.helpers.image_tag(background_img || 'backgrounds/nil.png', style: 'height: 64px; width: 64px;') %>
-        </div>
-        <div class="hex size64">
-          <% if human_focus&.loc == loc %>
-            <%= ActionController::Base.helpers.image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
-          <% end %>
-        </div>
-        <div class="hex">
-          <nobr>
-            <%= hexes_view[y][x] %>
-          </nobr>
-        </div>
-        <% if building&.hp %>
-          <div class="hex" style="top: 90%;">
-            <%= building&.hp %>
+    <% hexes_view.each_with_index do |hexes_y, y| %>
+      <% hexes_y.each_with_index do |_, x| %>
+        <% loc = Location.new(x, y) %>
+        <% building = game.world.buildings.at(loc) %>
+        <% background_img = building&.background_img %>
+        <% padding_top = x.even? ? 64*y : 64*y + 32 %>
+        <% padding_left = 48*x %>
+        <div
+            style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_left %>px 0px; user-select: none;"
+            onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});"
+            oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
+            >
+          <div class="hex size64">
+            <%= ActionController::Base.helpers.image_tag(background_img || 'backgrounds/nil.png', style: 'height: 64px; width: 64px;') %>
           </div>
-        <% end %>
-        <% if human_focus  %>
-          <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
-            <div class="hex size64">
+          <div class="hex size64">
+            <% if human_focus&.loc == loc %>
+              <%= ActionController::Base.helpers.image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
+            <% end %>
+          </div>
+          <div class="hex">
+            <nobr>
+              <%= hexes_view[y][x] %>
+            </nobr>
+          </div>
+          <% if building&.hp %>
+            <div class="hex" style="top: 90%;">
+              <%= building&.hp %>
+            </div>
+          <% end %>
+          <% if human_focus  %>
+            <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
+              <div class="hex size64">
+                <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
+              </div>
+              <div class="hex" style="font-size: 16px;">
+                <%= UnitAction.reason(game, human_focus, loc).japanese %>
+              </div>
+            <% end %>
+          <% end %>
+
+          <% if menu_actionable_locs.include?(loc) %>
+            <div class="hex" style="font-size: 32px;">
               <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>
             <div class="hex" style="font-size: 16px;">
-              <%= UnitAction.reason(game, human_focus, loc).japanese %>
+              <%= menu_action.japanese %>
             </div>
           <% end %>
-        <% end %>
 
-        <% if menu_actionable_locs.include?(loc) %>
-          <div class="hex" style="font-size: 32px;">
-            <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
-          </div>
-          <div class="hex" style="font-size: 16px;">
-            <%= menu_action.japanese %>
-          </div>
-        <% end %>
-
-        <!--
-          <nobr>
-          <%= [x, y] %>
-          </nobr>
-        -->
-      </div>
+          <!--
+            <nobr>
+            <%= [x, y] %>
+            </nobr>
+          -->
+        </div>
+      <% end %>
     <% end %>
-  <% end %>
+  </div>
 
-  <div style="position: absolute; margin: 0px <%= 64 * game.world.size_x %>px;">
+  <div class="col-4 text-start">
     <div class="container">
       ターン <%= turn.num %>
     </div>
@@ -91,10 +96,11 @@
             <% Turn::MENU_ACTIONS.at(game, player).each do |k, v| %>
               <div class="row align-items-start">
                 <div class="col">
+                  <% available = menu_actionable_actions.key?(k) %>
                   <button
                       data-bs-toggle="button"
-                      class="btn btn-primary <%= 'active' if menu_action&.id == k %>"
-                      <%= 'disabled' if !menu_actionable_actions.key?(k) %>
+                      class="btn <%= available ? 'btn-secondary' : 'btn-outline' %> <%= 'active' if menu_action&.id == k %>"
+                      <%= 'disabled' if !available %>
                       onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
                     <nobr><%= v.japanese %></nobr>
                   </button>
@@ -115,7 +121,9 @@
                   class="btn btn-secondary"
                   <%= 'disabled' if completed[player] || game.winner %>
                   onclick="live.forward('world', {type: 'complete', player_id: '<%= player.id %>'});">
-                操作終了
+                <nobr>
+                  ターン終了↵
+                </nobr>
               </button>
             </div>
           </li>
@@ -128,16 +136,6 @@
     <% end %>
 
     <div class="container">
-      <h5>Debug</h5>
-      <input class="btn btn-secondary" type="submit"
-             value="Autoplay all (押しちゃダメ)"
-             onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY});">
-      <input class="btn btn-secondary" type="submit"
-             value="Reset (押しちゃダメ)"
-             onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
-
-    </div>
-    <div class="container">
       <h5>メッセージ</h5>
       <ul class="list-group">
         <% turn.messages.each do |m| %>
@@ -146,6 +144,17 @@
           </li>
         <% end %>
       </ul>
+    </div>
+
+    <div class="container">
+      <h5>Debug</h5>
+      <input class="btn btn-secondary" type="submit"
+             value="Autoplay all"
+             onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY});">
+      <input class="btn btn-secondary" type="submit"
+             value="Reset"
+             onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
+
     </div>
   </div>
 </div>

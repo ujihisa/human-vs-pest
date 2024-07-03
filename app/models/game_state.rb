@@ -97,7 +97,8 @@ class World
       end
       raise "Nothing was deleted #{loc}"
     end
-    def buildings.of(player, bid)
+    def buildings.of(player_id, bid)
+      player = Player.find(player_id)
       self[player].find { _1.id == bid }
     end
 
@@ -212,7 +213,7 @@ class World
         unit =
           if human
             "🧍#{human.hp}"
-            # "🧍#{move_distance(:human, @buildings.of(Human, :base).loc, loc)}"
+            # "🧍#{move_distance(:human, @buildings.of(:human, :base).loc, loc)}"
           elsif pest
             raise "duplicated unit location: #{x}, #{y}" if human
             "🐛#{pest.hp}"
@@ -296,9 +297,9 @@ class GameState
 
   # Returns `nil` if the game is still ongoing
   def winner
-    if @world.buildings.of(Human, :base).nil?
+    if @world.buildings.of(:human, :base).nil?
       Pest
-    elsif @world.buildings.of(Pest, :base).nil?
+    elsif @world.buildings.of(:human, :base).nil?
       Human
     else
       nil
@@ -353,10 +354,10 @@ module AI
     end
 
     # 相手が自拠点に近づいてきていれば戻る
-    min_dist = game.world.unitss[player.opponent].map {|u| distance(u.loc, game.world.buildings.of(player, :base).loc) }.min
+    min_dist = game.world.unitss[player.opponent].map {|u| distance(u.loc, game.world.buildings.of(player.id, :base).loc) }.min
     if min_dist && min_dist < 4
       ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
-        distance(loc, game.world.buildings.of(player, :base).loc)
+        distance(loc, game.world.buildings.of(player.id, :base).loc)
       }
       return ua if ua
     end
@@ -364,7 +365,7 @@ module AI
     # 相手よりHP合計が多ければrage mode
     if game.world.unitss[player.opponent].sum(&:hp) < game.world.unitss[player].sum(&:hp)
       ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
-        game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent, :base).loc)
+        game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent.id, :base).loc)
       }
       ua
     else
