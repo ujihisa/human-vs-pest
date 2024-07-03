@@ -27,22 +27,4 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     get game_url(@game)
     assert_response :success
   end
-
-  test "should get edit" do
-    get edit_game_url(@game)
-    assert_response :success
-  end
-
-  test "should update game" do
-    patch game_url(@game), params: { game: { finished_at: @game.finished_at, player_name: @game.player_name } }
-    assert_redirected_to game_url(@game)
-  end
-
-  test "should destroy game" do
-    assert_difference("Game.count", -1) do
-      delete game_url(@game)
-    end
-
-    assert_redirected_to games_url
-  end
 end
