@@ -1,20 +1,13 @@
 # frozen_string_literal: true
 
 Building = Data.define(:player, :id, :loc, :hp) do
+  DEFAULT_BUILDING_HP = {
+    tree: -> { rand(1..3) },
+    rock: -> { rand(5..9) },
+    barricade: -> { 8 },
+  }
   def initialize(id:, player:, loc:, hp: nil)
-    hp ||=
-      case id
-      when :base, :seeds0, :seeds, :flowers, :fruits, :landmine, :trail, :pond
-        nil
-      when :tree
-        3
-      when :rock # 未実装
-        3
-      when :barricade # 未実装
-        3
-      else
-        raise "Unknown Building type: #{id}"
-      end
+    hp ||= DEFAULT_BUILDING_HP[id]&.call
     super(player:, id:, loc:, hp:)
   end
 

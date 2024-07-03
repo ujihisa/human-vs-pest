@@ -16,7 +16,7 @@ class Turn
 
     locs = (@game.world.neighbours(unit.loc) + unit.moveable(world: @game.world)).uniq
 
-    locs.select {|loc| !!@game.reason_unit_action(player, unit, loc) }
+    locs.select {|loc| !!UnitAction.reason(@game, unit, loc) }
   end
 
   MenuAction = Data.define(:id, :japanese, :cost, :location_type)
@@ -90,7 +90,7 @@ class Turn
     when :spawn_unit
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
-      new_unit = Unit.new(player: player, loc: @game.world.buildings.of(player, :base).loc, hp: 8)
+      new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player, :base).loc, hp: 8)
       @game.world.unitss[player] << new_unit
       @game.total_spawned_units[player] += 1
       @actionable_units[player.id] += [new_unit]
@@ -118,21 +118,25 @@ class Turn
     end
   end
 
-  def unit_action!(player, unit, loc, action)
+  def unit_action!(player, unit, loc, action_id)
     raise 'must not happen: The game is already finished' if @game.winner
     raise 'must not happen: The unit is not actionable' unless @actionable_units[player.id].include?(unit)
 
-    @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが #{action} しました"
+    action = UnitAction.find(action_id)
+    @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが#{action.japanese}しました"
 
-    case action
+    case action.id
     when :move
-      unit.move!(loc)
+      unit.loc = loc
       unit_passive_action!(player, unit)
     when :harvest_woods
       @game.resources[player][:wood] = @game.resources[player][:wood].add_amount(1)
+      building = @game.world.buildings.at(loc)
 
-      # TODO: 木のHPを減らす
       @game.world.buildings.delete_at(loc)
+      if 1 < building.hp
+        @game.world.buildings[player] << building.with(hp: building.hp - 1)
+      end
     when :farming
       @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(-1)
       @game.world.buildings[player] << Building.new(player: player, id: :seeds0, loc: loc)

@@ -31,13 +31,18 @@
             <%= hexes_view[y][x] %>
           </nobr>
         </div>
+        <% if building&.hp %>
+          <div class="hex" style="top: 90%;">
+            <%= building&.hp %>
+          </div>
+        <% end %>
         <% if human_focus  %>
           <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
             <div class="hex size64">
               <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>
             <div class="hex" style="font-size: 16px;">
-              <%= game.reason_unit_action(Human, human_focus, loc) %>
+              <%= game.reason_unit_action(Human, human_focus, loc).japanese %>
             </div>
           <% end %>
         <% end %>

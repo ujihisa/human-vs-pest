@@ -13,6 +13,43 @@ end
 Human = Player.new(id: :human, japanese: '人間', opponent_id: :pest)
 Pest = Player.new(id: :pest, japanese: '害虫', opponent_id: :human)
 
+UnitAction = Data.define(:id, :japanese) do
+  def self.find(id)
+    UNIT_ACTIONS.fetch(id)
+  end
+
+  # nil | UnitAction
+  def self.reason(game, unit, loc)
+    return nil if game.winner
+
+    if 1 < unit.hp
+      if game.world.unitss[unit.player.opponent].find { loc == _1.loc }
+        return UnitAction.find(:melee_attack)
+      end
+    end
+
+    if unit.moveable(world: game.world).include?(loc)
+      return UnitAction.find(:move)
+    end
+
+    b = game.world.buildings.at(loc)
+    if b
+      case b.id
+      when :tree
+        return UnitAction.find(:harvest_woods)
+      end
+    end
+
+    nil
+  end
+end
+
+UNIT_ACTIONS = {
+  move: UnitAction.new(:move, '移動'),
+  melee_attack: UnitAction.new(:melee_attack, '近接攻撃'),
+  harvest_woods: UnitAction.new(:harvest_woods, '伐採'),
+}
+
 class World
   # size_x Integer
   # size_y Integer
@@ -32,23 +69,10 @@ class World
       pest: Location.new(size_x / 2, size_y - 1),
     }
 
-    trees = Array.new(size_x * size_y / 4) {
-      10.times.find {
-        loc = Location.new(rand(size_x), rand(size_y))
-        if loc != bases[:human] && loc != bases[:pest]
-          break loc
-        end
-      } or raise 'Could not find a suitable tree location'
-    }
-
-    ponds = Array.new(size_x * size_y / 8) {
-      10.times.find {
-        loc = Location.new(rand(size_x), rand(2 ...(size_y - 2)))
-        if loc != bases[:human] && loc != bases[:pest] && !trees.include?(loc)
-          break loc
-        end
-      } or raise 'Could not find a suitable pond location'
-    }
+    vacant_locs = [*0...size_x].product([*1...size_y.-(1)]).map { Location.new(*_1) }
+    vacant_locs.shuffle!
+    trees = vacant_locs.shift(size_x * size_y / 8)
+    ponds = vacant_locs.shift(size_x * size_y / 10)
 
     buildings = {
       Human => [
@@ -80,8 +104,8 @@ class World
       size_x: size_x,
       size_y: size_y,
       unitss: {
-        Human => [Unit.new(player: Human, loc: bases[:human], hp: 8)],
-        Pest => [Unit.new(player: Human, loc: bases[:pest], hp: 8)],
+        Human => [Unit.new(player_id: :human, loc: bases[:human], hp: 8)],
+        Pest => [Unit.new(player_id: :pest, loc: bases[:pest], hp: 8)],
       },
       buildings: buildings,
     )
@@ -189,31 +213,23 @@ class World
     end
     puts('=' * (@size_x * 6 + 1))
   end
-
-  # def find_unit_by_xy(loc)
-  #   @unitss.values.flatten(1).find { _1.loc == loc }
-  # end
 end
 
-class Unit
-  def initialize(player:, loc:, hp:)
-    @player = player
-    @loc = loc
-    @hp = hp
+Unit = Struct.new(:player_id, :loc, :hp) do
+  def player
+    Player.find(player_id)
   end
-  attr_reader :loc
-  attr_accessor :hp
 
   # returns [(Integer, Integer)]
   # TODO: 小道が複数あるときにも再帰的に対応。そのためにunit testを追加
   def moveable(world:)
-    world.neighbours(@loc).select {|loc|
-      !world.not_passable?(@player, loc)
+    world.neighbours(loc).select {|loc|
+      !world.not_passable?(player, loc)
     }.flat_map {|loc|
       b = world.buildings.at(loc)
-      if b && b.player == @player && b.id == :trail
+      if b && b.player == player && b.id == :trail
         [loc] + world.neighbours(loc).select {|loc|
-          !world.not_passable?(@player, loc)
+          !world.not_passable?(player, loc)
         }
       else
         [loc]
@@ -221,10 +237,6 @@ class Unit
     }.select {|loc|
       !world.unitss.values.flatten(1).any? { _1.loc == loc }
     }
-  end
-
-  def move!(loc)
-    @loc = loc
   end
 
   def dead?
@@ -296,31 +308,6 @@ class GameState
     2 ** @total_spawned_units[player]
   end
 
-  # nil | Symbol
-  def reason_unit_action(player, unit, loc)
-    return nil if self.winner
-
-    if 1 < unit.hp
-      if @world.unitss[player.opponent].find { loc == _1.loc }
-        return :melee_attack
-      end
-    end
-
-    if unit.moveable(world: @world).include?(loc)
-      return :move
-    end
-
-    b = @world.buildings.at(loc)
-    if b
-      case b.id
-      when :tree
-        return :harvest_woods
-      end
-    end
-
-    nil
-  end
-
   def tick!
     @world.buildings.each do |_, bs|
       bs.each.with_index do |b, i|
@@ -346,9 +333,9 @@ class GameState
 end
 
 module AI
-  # [Location, Symbol] | nil
+  # [Location, UnitAction] | nil
   def self.unit_action_for(game, player, u, locs)
-    uas = locs.map {|loc| [loc, game.reason_unit_action(player, u, loc)] }
+    uas = locs.map {|loc| [loc, UnitAction.reason(game, u, loc)] }
 
     # セルフケア最優先
     if u.hp < 3
@@ -356,14 +343,14 @@ module AI
     end
 
     # 次いで近接攻撃
-    if ua = uas.find { [:melee_attack].include?(_1[1]) }
+    if ua = uas.find { [:melee_attack].include?(_1[1].id) }
       return ua
     end
 
     # 相手が自拠点に近づいてきていれば戻る
     min_dist = game.world.unitss[player.opponent].map {|u| distance(u.loc, game.world.buildings.of(player, :base).loc) }.min
     if min_dist && min_dist < 4
-      ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
+      ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
         distance(loc, game.world.buildings.of(player, :base).loc)
       }
       return ua if ua
@@ -371,13 +358,13 @@ module AI
 
     # 相手より人数が多ければrage mode
     if game.world.unitss[player.opponent].size < game.world.unitss[player].size
-      ua = uas.select {|_, a| a == :move }.min_by {|loc, _|
+      ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
         distance(loc, game.world.buildings.of(player.opponent, :base).loc)
       }
       ua
     else
       # じわじわ成長を狙う
-      ua = uas.select {|_, a| a != :move }.sample
+      ua = uas.select {|_, a| a.id != :move }.sample
       ua ||= uas.sample
       ua
     end
@@ -409,8 +396,8 @@ if __FILE__ == $0
 
       turn.actionable_units[player.id].each do |u|
         locs = turn.unit_actionable_locs(player, u)
-        ua = AI.unit_action_for(game, player, u, locs)
-        turn.unit_action!(player, u, ua.first, ua.last) if ua
+        (loc, ua) = AI.unit_action_for(game, player, u, locs)
+        turn.unit_action!(player, u, loc, ua.id) if ua
       end
     end
     turn.draw

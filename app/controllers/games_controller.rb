@@ -39,8 +39,8 @@ class WorldTag < Live::View
 
           @@turn.actionable_units[player.id].each do |u|
             locs = @@turn.unit_actionable_locs(player, u)
-            ua = AI.unit_action_for(@@game, player, u, locs)
-            @@turn.unit_action!(player, u, ua.first, ua.last) if ua
+            (loc, ua) = AI.unit_action_for(@@game, player, u, locs)
+            @@turn.unit_action!(player, u, loc, ua.id) if ua
           end
           @@completed[player] = true
           sleep 1
@@ -80,7 +80,7 @@ class WorldTag < Live::View
       if @@human_focus
         if @@turn.unit_actionable_locs(Human, @@human_focus).include?(loc)
           action = @@turn.game.reason_unit_action(Human, @@human_focus, loc)
-          @@turn.unit_action!(Human, @@human_focus, loc, action)
+          @@turn.unit_action!(Human, @@human_focus, loc, action.id)
         end
         @@human_focus = nil
       else
@@ -140,8 +140,8 @@ class WorldTag < Live::View
 
             @@turn.actionable_units[player.id].each do |u|
               locs = @@turn.unit_actionable_locs(player, u)
-              ua = AI.unit_action_for(@@game, player, u, locs)
-              @@turn.unit_action!(player, u, ua.first, ua.last) if ua
+              (loc, ua) = AI.unit_action_for(@@game, player, u, locs)
+              @@turn.unit_action!(player, u, loc, ua.id) if ua
             end
             update!; sleep 0.1
           end
