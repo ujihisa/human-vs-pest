@@ -79,7 +79,7 @@ class WorldTag < Live::View
       loc = Location.new(event[:x], event[:y])
       if @@human_focus
         if @@turn.unit_actionable_locs(Human, @@human_focus).include?(loc)
-          action = @@turn.game.reason_unit_action(Human, @@human_focus, loc)
+          action = UnitAction.reason(@@turn.game, @@human_focus, loc)
           @@turn.unit_action!(Human, @@human_focus, loc, action.id)
         end
         @@human_focus = nil

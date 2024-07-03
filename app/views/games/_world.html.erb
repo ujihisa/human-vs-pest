@@ -42,7 +42,7 @@
               <%= ActionController::Base.helpers.image_tag("backgrounds/actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>
             <div class="hex" style="font-size: 16px;">
-              <%= game.reason_unit_action(Human, human_focus, loc).japanese %>
+              <%= UnitAction.reason(game, human_focus, loc).japanese %>
             </div>
           <% end %>
         <% end %>
@@ -88,7 +88,7 @@
                       class="btn btn-primary <%= 'active' if menu_action&.id == k %>"
                       <%= 'disabled' if !menu_actionable_actions.key?(k) %>
                       onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
-                    <%= v.japanese %>
+                    <nobr><%= v.japanese %></nobr>
                   </button>
                 </div>
                 <div class="col">
