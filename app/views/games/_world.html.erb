@@ -1,3 +1,11 @@
+<script>
+  document.addEventListener('keyup', function(event) {
+    if (event.key === 'Enter') {
+      live.forward('world', {type: 'complete', player_id: 'human'});
+    }
+  });
+</script>
+
 <% menu_actionable_locs = menu_action ? turn.menu_actionable_actions(Human).fetch(menu_action.id, []) : [] %>
 <div style="height: 640px; width: 480px; margin: auto; border: solid 0px black">
   <% if game.winner %>
@@ -106,7 +114,7 @@
               <button
                   class="btn btn-secondary"
                   <%= 'disabled' if completed[player] || game.winner %>
-                  onclick="window.event = event; live.forward('world', {type: 'complete', player_id: '<%= player.id %>', clientX: event.clientX, clientY: event.clientY});">
+                  onclick="live.forward('world', {type: 'complete', player_id: '<%= player.id %>'});">
                 操作終了
               </button>
             </div>

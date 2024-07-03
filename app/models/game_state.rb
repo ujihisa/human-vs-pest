@@ -2,7 +2,8 @@
 
 Player = Data.define(:id, :japanese, :opponent_id) do
   def self.find(id)
-    [Human, Pest].find { _1.id == id }
+    [Human, Pest].find { _1.id == id } or
+      raise "Must not happen: Unknown player: #{id}"
   end
 
   def opponent
@@ -156,8 +157,6 @@ class World
     if b && player != b.player && !b.passable?
       return true
     end
-
-    @unitss[Human].find { _1.loc == loc } || @unitss[Pest].find { _1.loc == loc }
   end
 
   # [[String]]

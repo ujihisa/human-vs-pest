@@ -114,16 +114,14 @@ class WorldTag < Live::View
       @@menu_action = nil
     when 'complete'
       player = Player.find(event[:player_id].to_sym)
-      if player.nil?
-        raise "Must not happen: Unknown player: #{event[:player_id]}"
-      end
 
       @@completed[player] = true
+      @@human_focus = nil
+      @@menu_action = nil
       update!
 
       if @@completed.all? { _2 }
         @@completed = { Human => false, Pest => false }
-        @@human_focus = nil
         @@turn = @@turn.next
       end
     when 'autoplay_all'
