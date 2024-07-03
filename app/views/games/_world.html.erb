@@ -19,7 +19,7 @@
     <% end %>
 
     <% hexes_view.each_with_index do |hexes_y, y| %>
-      <% hexes_y.each_with_index do |_, x| %>
+      <% hexes_y.each_with_index do |hex, x| %>
         <% loc = Location.new(x, y) %>
         <% building = game.world.buildings.at(loc) %>
         <% background_img = building&.background_img %>
@@ -40,7 +40,7 @@
           </div>
           <div class="hex">
             <nobr>
-              <%= hexes_view[y][x] %>
+              <%= hex %>
             </nobr>
           </div>
           <% if building&.hp %>

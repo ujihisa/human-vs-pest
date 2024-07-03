@@ -24,7 +24,7 @@ UnitAction = Data.define(:id, :japanese) do
     return nil if game.winner
 
     if 1 < unit.hp
-      if game.world.unitss[unit.player.opponent].find { loc == _1.loc }
+      if game.world.unitss[unit.player.opponent.id].find { loc == _1.loc }
         return UnitAction.find(:melee_attack)
       end
     end
@@ -54,7 +54,7 @@ UNIT_ACTIONS = {
 class World
   # size_x Integer
   # size_y Integer
-  # unitss {Human => [(Integer, Integer)], Pest => [(Integer, Integer)]}
+  # unitss {human: [(Integer, Integer)], pest: [(Integer, Integer)]}
   # buildings {Human => [Building], ...}
   def initialize(size_x:, size_y:, unitss:, buildings:)
     @size_x = size_x
@@ -106,8 +106,8 @@ class World
       size_x: size_x,
       size_y: size_y,
       unitss: {
-        Human => [Unit.new(player_id: :human, loc: bases[:human])],
-        Pest => [Unit.new(player_id: :pest, loc: bases[:pest])],
+        human: [Unit.new(player_id: :human, loc: bases[:human])],
+        pest: [Unit.new(player_id: :pest, loc: bases[:pest])],
       },
       buildings: buildings,
     )
@@ -208,8 +208,8 @@ class World
             '　'
           end
 
-        human = @unitss[Human].find { _1.loc == Location.new(x, y) }
-        pest = @unitss[Pest].find { _1.loc == Location.new(x, y) }
+        human = @unitss[:human].find { _1.loc == Location.new(x, y) }
+        pest = @unitss[:pest].find { _1.loc == Location.new(x, y) }
         unit =
           if human
             "🧍#{human.hp}"
@@ -267,7 +267,7 @@ PlayerResource = Data.define(:resource_id, :amount) do
 
   def view
     if 5 < amount
-      "#{resource.emoji}x#{amount}"
+      "#{resource.emoji}x#{amount} "
     else
       "#{resource.emoji}" * amount
     end
@@ -299,7 +299,7 @@ class GameState
   def winner
     if @world.buildings.of(:human, :base).nil?
       Pest
-    elsif @world.buildings.of(:human, :base).nil?
+    elsif @world.buildings.of(:pest, :base).nil?
       Human
     else
       nil
@@ -332,7 +332,6 @@ class GameState
   def draw
     p(
       resources: @resources.transform_values {|rs| rs.values.map(&:amount) },
-      # num_units: @world.unitss.transform_values(&:size),
     )
     @world.draw
   end
@@ -341,6 +340,8 @@ end
 module AI
   # [Location, UnitAction] | nil
   def self.unit_action_for(game, player, u, locs)
+    return nil if game.winner
+
     uas = locs.map {|loc| [loc, UnitAction.reason(game, u, loc)] }
 
     # セルフケア最優先
@@ -349,12 +350,12 @@ module AI
     end
 
     # 次いで近接攻撃
-    if ua = uas.find { [:melee_attack].include?(_1[1].id) }
+    if ua = uas.find { _1[1].id == :melee_attack }
       return ua
     end
 
     # 相手が自拠点に近づいてきていれば戻る
-    min_dist = game.world.unitss[player.opponent].map {|u| distance(u.loc, game.world.buildings.of(player.id, :base).loc) }.min
+    min_dist = game.world.unitss[player.opponent.id].map {|u| distance(u.loc, game.world.buildings.of(player.id, :base).loc) }.min
     if min_dist && min_dist < 4
       ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
         distance(loc, game.world.buildings.of(player.id, :base).loc)
@@ -363,7 +364,7 @@ module AI
     end
 
     # 相手よりHP合計が多ければrage mode
-    if game.world.unitss[player.opponent].sum(&:hp) < game.world.unitss[player].sum(&:hp)
+    if game.world.unitss[player.opponent.id].sum(&:hp) < game.world.unitss[player.id].sum(&:hp)
       ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
         game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent.id, :base).loc)
       }
@@ -405,6 +406,7 @@ if __FILE__ == $0
         locs = turn.unit_actionable_locs(player, u)
         (loc, ua) = AI.unit_action_for(game, player, u, locs)
         turn.unit_action!(player, u, loc, ua.id) if ua
+        break if game.winner
       end
     end
     turn.draw

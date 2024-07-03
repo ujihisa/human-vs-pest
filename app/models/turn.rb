@@ -5,7 +5,7 @@ class Turn
     @num = num
     @game = game
 
-    @actionable_units = @game.world.unitss.to_h {|p, us| [p.id, us.dup] }
+    @actionable_units = @game.world.unitss.to_h {|p_id, us| [p_id, us.dup] }
     @messages = []
   end
   attr_reader :num, :game, :actionable_units, :messages
@@ -26,7 +26,7 @@ class Turn
     farming:         ['農業',            { seed: 1 },   :unit],
     build_trail:     ['建設/小道',       { wood: 1 },   :unit],
     build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
-    build_landmine:  ['建設/地雷',       { ore: 3 },    :unit],
+    build_bomb:      ['建設/爆弾',       { ore: 3 },    :unit],
     spawn_unit:      ['ユニット生産',    { money: :f }, :base],
   }.to_h {|id, (a, b, c)| [id, MenuAction.new(id: id, japanese: a, cost: b, location_type: c)] }
   def MENU_ACTIONS.at(game, player)
@@ -54,13 +54,13 @@ class Turn
     }.transform_values {|m|
       case m.location_type
       when :unit
-        @game.world.unitss[player].map(&:loc).select {|loc|
+        @game.world.unitss[player.id].map(&:loc).select {|loc|
           # 自分の拠点だけは壊せない
           @game.world.buildings.of(player.id, :base).loc != loc
         }
       when :base
         [@game.world.buildings.of(player.id, :base).loc].select {|loc|
-          !@game.world.unitss[player].map(&:loc).include?(loc)
+          !@game.world.unitss[player.id].map(&:loc).include?(loc)
         }
       else
         raise "Invalid :location_type: #{v[:location_type]}"
@@ -91,7 +91,7 @@ class Turn
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
       new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player.id, :base).loc)
-      @game.world.unitss[player] << new_unit
+      @game.world.unitss[player.id] << new_unit
       @game.total_spawned_units[player] += 1
       @actionable_units[player.id] += [new_unit]
     else
@@ -142,7 +142,7 @@ class Turn
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(-1)
       @game.world.buildings[player] << Building.new(player: player, id: :seeds0, loc: loc)
     when :melee_attack
-      target_unit = @game.world.unitss[player.opponent].find { _1.loc == loc }
+      target_unit = @game.world.unitss[player.opponent.id].find { _1.loc == loc }
       if unit.hp == target_unit.hp
         unit.hp = 1
         target_unit.hp = 1
@@ -154,11 +154,11 @@ class Turn
 
       if unit.dead?
         @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが死亡しました"
-        @game.world.unitss[player].delete(unit)
+        @game.world.unitss[player.id].delete(unit)
       end
       if target_unit.dead?
         @messages << "#{player.opponent.japanese}: #{target_unit.loc.inspect}にいるユニットが死亡しました"
-        @game.world.unitss[player.opponent].delete(target_unit)
+        @game.world.unitss[player.opponent.id].delete(target_unit)
       end
     end
 
@@ -189,7 +189,8 @@ class Turn
       end
       @game.tick!
       t = Turn.new(num: @num + 1, game: @game)
-      t.game.world.unitss.each do |p, units|
+      t.game.world.unitss.each do |p_id, units|
+        p = Player.find(p_id)
         units.each do |u|
           t.unit_passive_action!(p, u)
         end
