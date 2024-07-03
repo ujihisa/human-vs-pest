@@ -107,7 +107,7 @@ class Turn
       @game.world.buildings.delete_at(unit.loc)
       @game.world.buildings[player] << b.with(id: :seeds0)
 
-      @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(3)
+      @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(1)
     in Building(player: ^(player.opponent)) => b
       @messages << "#{player.japanese}: #{b.id}を略奪しました"
@@ -129,6 +129,7 @@ class Turn
     when :move
       unit.loc = loc
       unit_passive_action!(player, unit)
+      unit.hp = [unit.hp, unit.max_hp(@game.world)].min
     when :harvest_woods
       @game.resources[player.id][:wood] = @game.resources[player.id][:wood].add_amount(1)
       building = @game.world.buildings.at(loc)
@@ -183,7 +184,7 @@ class Turn
         player = Player.find(player_id)
         units.each do |u|
           @messages << "#{player.japanese}: #{u.loc.inspect}にいるユニットが回復しました"
-          u.hp = [u.hp + 3, u.max_hp].min
+          u.hp = [u.hp + 3, u.max_hp(@game.world)].min
         end
       end
       @game.tick!

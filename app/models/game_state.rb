@@ -112,6 +112,37 @@ class World
     )
   end
 
+  # loc0からloc1にunitがmoveするのに必要なターン数
+  # trailはターン数を消費しない
+  def move_distance(player_id, loc0, loc1)
+    return 0 if loc0 == loc1
+    player = Player.find(player_id)
+
+    q = [loc0]
+    visited = { loc0 => 0 }
+    until q.empty?
+      loc = q.shift
+      dist = visited[loc]
+
+      neighbours(loc).each do |nloc|
+        next if visited[nloc]
+        next if not_passable?(player, nloc)
+
+        building = buildings.at(nloc)
+        visited[nloc] =
+          if building&.player == player && building&.id == :trail
+            dist
+          else
+            dist + 1
+          end
+        return visited[nloc] if nloc == loc1
+        q << nloc
+      end
+    end
+
+    raise "Must not happen: unreachable"
+  end
+
   def neighbours(loc)
     raise "Missing loc" unless loc
 
@@ -181,6 +212,7 @@ class World
         unit =
           if human
             "🧍#{human.hp}"
+            # "🧍#{move_distance(:human, @buildings.of(Human, :base).loc, loc)}"
           elsif pest
             raise "duplicated unit location: #{x}, #{y}" if human
             "🐛#{pest.hp}"
@@ -247,7 +279,7 @@ class GameState
     @resources = {
       human: {
         seed: PlayerResource.new(resource_id: :seed, amount: 1),
-        wood: PlayerResource.new(resource_id: :wood , amount: 10),
+        wood: PlayerResource.new(resource_id: :wood , amount: 0),
         ore: PlayerResource.new(resource_id: :ore, amount: 0),
         money: PlayerResource.new(resource_id: :money, amount: 0),
       },
@@ -273,9 +305,12 @@ class GameState
     end
   end
 
-  # (1), 2, 4, 8, 16, ...
   def cost_to_spawn_unit(player)
-    2 ** @total_spawned_units[player]
+    # (1), 2, 4, 8, 16, ...
+    # 2 ** @total_spawned_units[player]
+
+    # (1), 2, 3, 4, 5...
+    @total_spawned_units[player]
   end
 
   def tick!
@@ -308,7 +343,7 @@ module AI
     uas = locs.map {|loc| [loc, UnitAction.reason(game, u, loc)] }
 
     # セルフケア最優先
-    if u.hp < 3
+    if u.hp <= u.max_hp(game.world) / 2
       return nil
     end
 
@@ -326,10 +361,10 @@ module AI
       return ua if ua
     end
 
-    # 相手より人数が多ければrage mode
-    if game.world.unitss[player.opponent].size < game.world.unitss[player].size
+    # 相手よりHP合計が多ければrage mode
+    if game.world.unitss[player.opponent].sum(&:hp) < game.world.unitss[player].sum(&:hp)
       ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
-        distance(loc, game.world.buildings.of(player.opponent, :base).loc)
+        game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent, :base).loc)
       }
       ua
     else
