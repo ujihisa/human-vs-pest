@@ -49,7 +49,7 @@ class Turn
 
     MENU_ACTIONS.at(@game, player).select {|_, menu_action|
       menu_action.cost.all? {|k, amount|
-        @game.resources[player][k].amount >= amount
+        @game.resources[player.id][k].amount >= amount
       }
     }.transform_values {|m|
       case m.location_type
@@ -72,7 +72,7 @@ class Turn
 
   def menu_action!(player, action, loc)
     MENU_ACTIONS.at(@game, player)[action].cost.each do |k, amount|
-      @game.resources[player][k] = @game.resources[player][k].add_amount(-amount)
+      @game.resources[player.id][k] = @game.resources[player.id][k].add_amount(-amount)
     end
 
     case action
@@ -107,11 +107,11 @@ class Turn
       @game.world.buildings.delete_at(unit.loc)
       @game.world.buildings[player] << b.with(id: :seeds0)
 
-      @game.resources[player][:money] = @game.resources[player][:money].add_amount(3)
-      @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(1)
+      @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(3)
+      @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(1)
     in Building(player: ^(player.opponent)) => b
       @messages << "#{player.japanese}: #{b.id}を略奪しました"
-      @game.resources[player][:money] = @game.resources[player][:money].add_amount(1)
+      @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
       @game.world.buildings.delete_at(unit.loc)
     else
       # do nothing
@@ -130,7 +130,7 @@ class Turn
       unit.loc = loc
       unit_passive_action!(player, unit)
     when :harvest_woods
-      @game.resources[player][:wood] = @game.resources[player][:wood].add_amount(1)
+      @game.resources[player.id][:wood] = @game.resources[player.id][:wood].add_amount(1)
       building = @game.world.buildings.at(loc)
 
       @game.world.buildings.delete_at(loc)
@@ -138,7 +138,7 @@ class Turn
         @game.world.buildings[player] << building.with(hp: building.hp - 1)
       end
     when :farming
-      @game.resources[player][:seed] = @game.resources[player][:seed].add_amount(-1)
+      @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(-1)
       @game.world.buildings[player] << Building.new(player: player, id: :seeds0, loc: loc)
     when :melee_attack
       target_unit = @game.world.unitss[player.opponent].find { _1.loc == loc }

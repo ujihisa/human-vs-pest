@@ -88,9 +88,8 @@ class WorldTag < Live::View
           locs = @@turn.menu_actionable_actions(player)[@@menu_action.id]
           if locs && locs.include?(loc)
             @@turn.menu_action!(player, @@menu_action.id, loc)
-          else
-            @@menu_action = nil
           end
+          @@menu_action = nil
         else
           if human = @@turn.actionable_units[:human].find { _1.loc == loc }
             @@human_focus = human

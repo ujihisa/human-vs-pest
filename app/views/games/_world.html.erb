@@ -84,7 +84,7 @@
         <ul class="list-group">
           <li class="list-group-item">
             資源:
-            <%= game.resources[player].values.map { _1.view }.join('') %>
+            <%= game.resources[player.id].values.map { _1.view }.join('') %>
           </li>
           <% menu_actionable_actions = turn.menu_actionable_actions(player) %>
           <li class="list-group-item">
