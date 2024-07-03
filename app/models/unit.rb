@@ -9,7 +9,7 @@ Unit = Struct.new(:player_id, :loc, :hp) do
     Player.find(player_id)
   end
 
-  # TODO: 拠点との移動距離に依存する
+  # 拠点との移動距離に依存する
   def max_hp(world)
     base = world.buildings[player_id].find { _1.id == :base }
     [
@@ -19,22 +19,31 @@ Unit = Struct.new(:player_id, :loc, :hp) do
   end
 
   # returns [(Integer, Integer)]
-  # TODO: 小道が複数あるときにも再帰的に対応。そのためにunit testを追加
   def moveable(world:)
-    world.neighbours(loc).select {|loc|
-      !world.not_passable?(player, loc)
-    }.flat_map {|loc|
-      b = world.buildings.at(loc)
-      if b && b.player == player && b.id == :trail
-        [loc] + world.neighbours(loc).select {|loc|
-          !world.not_passable?(player, loc)
-        }
-      else
-        [loc]
+    visited = []
+    stack = [loc]
+    moveable_locs = []
+
+    until stack.empty?
+      current_loc = stack.pop
+      next if visited.include?(current_loc)
+      visited << current_loc
+
+      neighbours = world.neighbours(current_loc).select do |neighbour|
+        !visited.include?(neighbour) && !world.not_passable?(player, neighbour)
       end
-    }.select {|loc|
+
+      moveable_locs.concat(neighbours)
+
+      neighbours.each do |neighbour|
+        building = world.buildings.at(neighbour)
+        stack << neighbour if building&.player == player && building.id == :trail
+      end
+    end
+
+    moveable_locs.select do |loc|
       !world.unitss.values.flatten(1).any? { _1.loc == loc }
-    }
+    end
   end
 
   def dead?
