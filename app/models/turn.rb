@@ -147,7 +147,7 @@ class Turn
         unit.hp = 1
         target_unit.hp = 1
       else
-        damage = (unit.hp - target_unit.hp).abs
+        damage = [unit.hp, target_unit.hp].min
         unit.hp -= damage
         target_unit.hp -= damage
       end
