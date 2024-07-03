@@ -23,7 +23,7 @@ class Turn
 
   MENU_ACTIONS = {
     #                 :japanese          :cost          :location_type, :overridable_buildings
-    farming:         ['農業',            { seed: 1 },   :unit],
+    build_farm:         ['建設/農地',       { seed: 1 },   :unit],
     build_trail:     ['建設/小道',       { wood: 1 },   :unit],
     build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
     build_bomb:      ['建設/爆弾',       { ore: 3 },    :unit],
@@ -76,7 +76,7 @@ class Turn
     end
 
     case action
-    when :farming
+    when :build_farm
       if b = @game.world.buildings.at(loc) and b.id != :base
         @messages << "#{player.japanese}: #{b.id}が邪魔なのでとりあえず撤去しました"
         @game.world.buildings.delete_at(loc)
@@ -138,7 +138,7 @@ class Turn
       if 1 < building.hp
         @game.world.buildings[player.id] << building.with(hp: building.hp - 1)
       end
-    when :farming
+    when :build_farm
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(-1)
       @game.world.buildings[player.id] << Building.new(player: player, id: :seeds0, loc: loc)
     when :melee_attack
