@@ -87,8 +87,8 @@ class World
 
     vacant_locs = [*0...size_x].product([*1...size_y.-(1)]).map { Location.new(*_1) }
     vacant_locs.shuffle!
-    trees = vacant_locs.shift(size_x * size_y / 8)
-    ponds = vacant_locs.shift(size_x * size_y / 10)
+    trees = vacant_locs.shift(size_x * size_y * 0.2)
+    ponds = vacant_locs.shift(size_x * size_y * 0.1)
 
     buildings = {
       human: [
@@ -114,7 +114,8 @@ class World
   end
 
   # loc0からloc1にunitがmoveするのに必要なターン数
-  # trailはターン数を消費しない
+  # * trailはターン数を消費しない
+  # * treeはHP分だけターン数を消費する
   def move_distance(player_id, loc0, loc1)
     return 0 if loc0 == loc1
     player = Player.find(player_id)
@@ -127,15 +128,22 @@ class World
 
       neighbours(loc).each do |nloc|
         next if visited[nloc]
-        next if not_passable?(player, nloc)
-
         building = buildings.at(nloc)
+
+        next if not_passable?(player, nloc) && building.hp.nil?
+
         visited[nloc] =
           if building&.player == player && building&.id == :trail
             dist
           else
             dist + 1
           end
+
+        # 追加の移動ターンを計算するため、not_passable?でhpがある場合はそのHP分だけ追加のターンを使う
+        if not_passable?(player, nloc) && building&.hp
+          visited[nloc] += building.hp
+        end
+
         return visited[nloc] if nloc == loc1
         q << nloc
       end
