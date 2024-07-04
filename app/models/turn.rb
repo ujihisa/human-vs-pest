@@ -33,7 +33,7 @@ class Turn
     transform_values {|v|
       cost = v.cost.transform_values {|amount|
         if amount == :f
-          amount = game.cost_to_spawn_unit(player)
+          amount = game.cost_to_spawn_unit(player.id)
         else
           amount
         end
@@ -49,12 +49,7 @@ class Turn
 
     MENU_ACTIONS.at(@game, player).select {|_, menu_action|
       menu_action.cost.all? {|k, amount|
-        begin
-          @game.resources[player.id][k].amount >= amount
-        rescue => e # TODO: このrescueはデバグ終わったら即座に消す
-          pp [player.id, k, amount, @game.resources]
-          raise e
-        end
+        @game.resources[player.id][k].amount >= amount
       }
     }.transform_values {|m|
       case m.location_type
@@ -97,7 +92,7 @@ class Turn
 
       new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player.id, :base).loc)
       @game.world.unitss[player.id] << new_unit
-      @game.total_spawned_units[player] += 1
+      @game.total_spawned_units[player.id] += 1
       @actionable_units[player.id] += [new_unit]
     else
       p "Not implemented yet: #{action}"

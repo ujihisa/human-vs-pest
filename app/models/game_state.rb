@@ -299,7 +299,7 @@ class GameState
         money: PlayerResource.new(resource_id: :money, amount: 0),
       }
     }
-    @total_spawned_units = { Human => 1, Pest => 1 }
+    @total_spawned_units = { human: 1, pest: 1 }
   end
   attr_reader :world, :resources, :turn, :total_spawned_units
 
@@ -314,12 +314,12 @@ class GameState
     end
   end
 
-  def cost_to_spawn_unit(player)
+  def cost_to_spawn_unit(player_id)
     # (1), 2, 4, 8, 16, ...
     # 2 ** @total_spawned_units[player]
 
     # (1), 2, 3, 4, 5...
-    @total_spawned_units[player]
+    @total_spawned_units.fetch(player_id)
   end
 
   def tick!
