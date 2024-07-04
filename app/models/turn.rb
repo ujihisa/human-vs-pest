@@ -30,14 +30,15 @@ class Turn
     }.transform_values {|m|
       case m.location_type
       when :unit
+        base_loc = @game.world.buildings.of(player.id, :base).loc
         @game.world.unitss[player.id].map(&:loc).select {|loc|
-          # 自分の拠点だけは壊せない
-          @game.world.buildings.of(player.id, :base).loc != loc
+          # 自分の拠点だけは上書き設置できない
+          base_loc != loc
         }
-      when :base
-        [@game.world.buildings.of(player.id, :base).loc].select {|loc|
-          !@game.world.unitss[player.id].map(&:loc).include?(loc)
-        }
+      when :base_without_unit
+        base_loc = @game.world.buildings.of(player.id, :base).loc
+        # ユニットがいたらダメ
+        @game.world.unitss[player.id].map(&:loc).include?(base_loc) ? [] : [base_loc]
       when :bomb
         @game.world.buildings[player.id].select { _1.id == :bomb }.map(&:loc)
       else
@@ -55,18 +56,30 @@ class Turn
 
     case action
     when :build_farm
-      if b = @game.world.buildings.at(loc) and b.id != :base
-        @messages << "#{player.japanese}: #{b.id}が邪魔なのでとりあえず撤去しました"
+      if b = @game.world.buildings.at(loc)
+        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、農地にしました"
         @game.world.buildings.delete_at(loc)
+      else
+        @messages << "#{player.japanese}: #{loc.inspect}を農地にしました"
       end
 
-      @messages << "#{player.japanese}: #{loc.inspect}を農地にしました"
       @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :seeds0, loc: loc)
     when :build_trail
-      @messages << "#{player.japanese}: #{loc.inspect}を小道にしました"
+      if b = @game.world.buildings.at(loc)
+        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、小道にしました"
+        @game.world.buildings.delete_at(loc)
+      else
+        @messages << "#{player.japanese}: #{loc.inspect}を小道にしました"
+      end
+
       @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :trail, loc: loc)
     when :place_bomb
-      @messages << "#{player.japanese}: #{loc.inspect}に爆弾を設置しました"
+      if b = @game.world.buildings.at(loc)
+        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、爆弾を設置しました"
+        @game.world.buildings.delete_at(loc)
+      else
+        @messages << "#{player.japanese}: #{loc.inspect}に爆弾を設置しました"
+      end
       @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :bomb0, loc: loc)
     when :trigger_bomb
       @messages << "#{player.japanese}: #{loc.inspect}の爆弾を起爆しました!"
@@ -74,7 +87,7 @@ class Turn
       [loc, *@game.world.neighbours(loc)].each do |nloc|
         next if @game.world.buildings.at(nloc)&.id == :pond
         if b = @game.world.buildings.delete_at(nloc)
-          @messages << "#{player.japanese}: #{b.player.japanese} の #{b.id}を破壊しました"
+          @messages << "#{player.japanese}: #{b.player.japanese} の #{b.view}を破壊しました"
         end
         if u = @game.world.unitss.values.flatten(1).find { _1.loc == nloc }
           @messages << "#{player.japanese}: #{u.player.japanese} の ユニットが死亡しました"
@@ -109,7 +122,7 @@ class Turn
       @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(1)
     in Building(player_id: ^(player.opponent.id)) => b
-      @messages << "#{player.japanese}: #{b.id}を破壊しました"
+      @messages << "#{player.japanese}: #{b.view}を破壊しました"
       @game.world.buildings.delete_at(unit.loc)
     else
       # do nothing

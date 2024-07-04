@@ -1,3 +1,4 @@
+<% def image_tag(*); ActionController::Base.helpers.image_tag(*); end %>
 <script>
   document.addEventListener('keyup', function(event) {
     if (event.key === 'Enter') {
@@ -144,11 +145,11 @@
             oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
             >
           <div class="hex size64">
-            <%= ActionController::Base.helpers.image_tag(background_img || 'backgrounds/nil.png', style: 'height: 64px; width: 64px;') %>
+            <%= image_tag(background_img || 'backgrounds/nil.png', style: 'height: 64px; width: 64px;') %>
           </div>
           <div class="hex size64">
             <% if help_focus_loc == loc %>
-              <%= ActionController::Base.helpers.image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
+              <%= image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
             <% end %>
           </div>
           <div class="hex">
@@ -164,7 +165,7 @@
           <% if focus  %>
             <% if turn.unit_actionable_locs(your_player, focus).include?(loc) %>
               <div class="hex size64">
-                <%= ActionController::Base.helpers.image_tag("backgrounds/unit_actionable.png", style: 'height: 64px; width: 64px;') %>
+                <%= image_tag("backgrounds/unit_actionable.png", style: 'height: 64px; width: 64px;') %>
               </div>
               <div class="hex text-nowrap" style="font-size: 16px;">
                 <%= UnitAction.reason(turn.game, focus, loc).japanese %>
@@ -174,7 +175,7 @@
 
           <% if menu_actionable_locs.include?(loc) %>
             <div class="hex" style="font-size: 32px;">
-              <%= ActionController::Base.helpers.image_tag("backgrounds/menu_actionable.png", style: 'height: 64px; width: 64px;') %>
+              <%= image_tag("backgrounds/menu_actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>
             <div class="hex text-nowrap" style="font-size: 16px;">
               <%= menu_action_focus.japanese %>
