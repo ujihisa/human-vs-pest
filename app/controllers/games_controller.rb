@@ -115,7 +115,7 @@ class WorldTag < Live::View
     when 'menu'
       @focus = nil
 
-      menu_action_focus = MenuActions[event[:menu].to_sym]
+      menu_action_focus = MenuActions.at(@@turn.game, @your_player)[event[:menu].to_sym]
       case menu_action_focus
       when nil
         # do nothing
