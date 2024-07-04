@@ -89,7 +89,7 @@ class GameState
       human: {
         seed: PlayerResource.new(resource_id: :seed, amount: 1),
         wood: PlayerResource.new(resource_id: :wood , amount: 0),
-        ore: PlayerResource.new(resource_id: :ore, amount: 10),
+        ore: PlayerResource.new(resource_id: :ore, amount: 0),
         money: PlayerResource.new(resource_id: :money, amount: 0),
       },
       pest: {

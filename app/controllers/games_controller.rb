@@ -80,6 +80,7 @@ class WorldTag < Live::View
       {
         your_player: @your_player,
         turn: @@turn,
+        help_focus_loc: @help_focus_loc,
         focus: @@focus,
         completed: @@completed,
         hexes_view: @@turn.game.world.hexes_view(exclude_background: true),
@@ -93,6 +94,8 @@ class WorldTag < Live::View
     case event[:type]
     when 'click'
       loc = Location.new(event[:x], event[:y])
+      @help_focus_loc = loc
+
       if @@focus
         if @@turn.unit_actionable_locs(@your_player, @@focus).include?(loc)
           action = UnitAction.reason(@@turn.game, @@focus, loc)
