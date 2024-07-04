@@ -10,7 +10,11 @@
 <div class="row">
   <div class="col-4 text-start">
     <p>
+    <% if your_player %>
       あなたは<strong><%= your_player.japanese %></strong>としてプレイしてます
+    <% else %>
+      観戦モード
+    <% end %>
     </p>
 
     <% if help_focus_loc %>
@@ -36,7 +40,9 @@
         </div>
       <% end %>
 
-      <% if u = turn.game.world.unitss[your_player.id].find { _1.loc == help_focus_loc } %>
+      <% if !your_player %>
+        <!-- 観戦モードではユニットの情報は表示しない -->
+      <% elsif u = turn.game.world.unitss[your_player.id].find { _1.loc == help_focus_loc } %>
         <div class="container">
           <h5>ユニット</h2>
           <ul class="list-group">
@@ -139,51 +145,53 @@
       ターン <%= turn.num %>
     </div>
 
-    <div class="container">
-      <h5><%= your_player.japanese %></h5>
-      <ul class="list-group">
-        <li class="list-group-item">
-          資源:
-          <%= turn.game.resources[your_player.id].values.map { _1.view }.join('') %>
-        </li>
-        <% menu_actionable_actions = turn.menu_actionable_actions(your_player) %>
-        <li class="list-group-item">
-          <% Turn::MENU_ACTIONS.at(turn.game, your_player).each do |k, v| %>
-            <div class="row align-items-start">
-              <div class="col">
-                <% available = menu_actionable_actions.key?(k) %>
-                <button
-                    data-bs-toggle="button"
-                    class="btn <%= available ? 'btn-secondary' : 'btn-outline' %> <%= 'active' if menu_action&.id == k %>"
-                    <%= 'disabled' if !available %>
-                    onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
-                  <nobr><%= v.japanese %></nobr>
-                </button>
+    <% if your_player %>
+      <div class="container">
+        <h5><%= your_player.japanese %></h5>
+        <ul class="list-group">
+          <li class="list-group-item">
+            資源:
+            <%= turn.game.resources[your_player.id].values.map { _1.view }.join('') %>
+          </li>
+          <% menu_actionable_actions = turn.menu_actionable_actions(your_player) %>
+          <li class="list-group-item">
+            <% Turn::MENU_ACTIONS.at(turn.game, your_player).each do |k, v| %>
+              <div class="row align-items-start">
+                <div class="col">
+                  <% available = menu_actionable_actions.key?(k) %>
+                  <button
+                      data-bs-toggle="button"
+                      class="btn <%= available ? 'btn-secondary' : 'btn-outline' %> <%= 'active' if menu_action&.id == k %>"
+                      <%= 'disabled' if !available %>
+                      onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
+                    <nobr><%= v.japanese %></nobr>
+                  </button>
+                </div>
+                <div class="col">
+                  <small>
+                    <% v.cost.each do |k, amount| %>
+                      <%= PlayerResource.new(resource_id: k, amount: amount).view %>
+                    <% end %>
+                  </small>
+                </div>
               </div>
-              <div class="col">
-                <small>
-                  <% v.cost.each do |k, amount| %>
-                    <%= PlayerResource.new(resource_id: k, amount: amount).view %>
-                  <% end %>
-                </small>
-              </div>
+            <% end %>
+          </li>
+          <li class="list-group-item">
+            <div class="d-grid gap-2 col-6 mx-auto">
+              <button
+                  class="btn btn-secondary"
+                  <%= 'disabled' if completed[your_player] || turn.game.winner %>
+                  onclick="live.forward('world', {type: 'complete'});">
+                <nobr>
+                  ターン終了↵
+                </nobr>
+              </button>
             </div>
-          <% end %>
-        </li>
-        <li class="list-group-item">
-          <div class="d-grid gap-2 col-6 mx-auto">
-            <button
-                class="btn btn-secondary"
-                <%= 'disabled' if completed[your_player] || turn.game.winner %>
-                onclick="live.forward('world', {type: 'complete'});">
-              <nobr>
-                ターン終了↵
-              </nobr>
-            </button>
-          </div>
-        </li>
-      </ul>
-    </div>
+          </li>
+        </ul>
+      </div>
+    <% end %>
 
     <div class="container">
       <h5>Debug</h5>
