@@ -49,11 +49,10 @@ class WorldTag < Live::View
     # AI側を強制実行
     if @ai_player && !@@ai_stared
       @@ai_stared = true
-      pp :ai_started
       Async do
         until @@turn.game.winner do
-          while ((action, locs) = @@turn.menu_actionable_actions(@ai_player).first) # TODO: sample
-            @@turn.menu_action!(@ai_player, action, locs.sample)
+          while ((action, loc) = AI.select_menu_actions(@@turn, @ai_player, @@turn.menu_actionable_actions(@ai_player)).sample)
+            @@turn.menu_action!(@ai_player, action, loc)
           end
           sleep 1
 
@@ -144,8 +143,8 @@ class WorldTag < Live::View
         players = [Human, Pest]
         loop do
           players.each do |player|
-            while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
-              @@turn.menu_action!(player, action, locs.sample)
+            while ((action, loc) = AI.select_menu_actions(@@turn, player, @@turn.menu_actionable_actions(player)).sample)
+              @@turn.menu_action!(player, action, loc)
             end
             publish_update!; sleep 0.1
 

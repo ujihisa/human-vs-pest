@@ -38,6 +38,8 @@ UnitAction = Data.define(:id, :japanese) do
       case b.id
       when :tree
         return UnitAction.find(:harvest_woods)
+      when :rock
+        return UnitAction.find(:mine_ore)
       end
     end
 
@@ -49,6 +51,7 @@ UNIT_ACTIONS = {
   move: UnitAction.new(:move, '移動'),
   melee_attack: UnitAction.new(:melee_attack, '近接攻撃'),
   harvest_woods: UnitAction.new(:harvest_woods, '伐採'),
+  mine_ore: UnitAction.new(:mine_ore, '採掘'),
 }
 
 class World
@@ -69,7 +72,7 @@ class World
       self.each do |_, bs|
         return if bs.reject! { _1.loc == loc }
       end
-      raise "Nothing was deleted #{loc}"
+      nil
     end
     def buildings.of(player_id, bid)
       self[player_id].find { _1.id == bid }
@@ -89,6 +92,7 @@ class World
     vacant_locs.shuffle!
     trees = vacant_locs.shift(size_x * size_y * 0.2)
     ponds = vacant_locs.shift(size_x * size_y * 0.1)
+    rocks = vacant_locs.shift(size_x * size_y * 0.05)
 
     buildings = {
       human: [
@@ -100,6 +104,7 @@ class World
       world: [
         *trees.map { Building.new(player_id: :world, id: :tree, loc: _1) },
         *ponds.map { Building.new(player_id: :world, id: :pond, loc: _1) },
+        *rocks.map { Building.new(player_id: :world, id: :rock, loc: _1) },
       ]
     }
     new(
@@ -270,6 +275,7 @@ PlayerResource = Data.define(:resource_id, :amount) do
   end
 
   def add_amount(n)
+    raise "Negative amount: #{self}" if amount + n < 0
     self.class.new(resource_id: resource_id, amount: amount + n)
   end
 
@@ -332,6 +338,8 @@ class GameState
           bs[i] = b.with(id: :flowers)
         when :flowers
           bs[i] = b.with(id: :fruits)
+        when :bomb0
+          bs[i] = b.with(id: :bomb)
         end
       end
     end
@@ -345,56 +353,12 @@ class GameState
   end
 end
 
-module AI
-  # [Location, UnitAction] | nil
-  def self.unit_action_for(game, player, u, locs)
-    return nil if game.winner
-
-    uas = locs.map {|loc| [loc, UnitAction.reason(game, u, loc)] }
-
-    # セルフケア最優先
-    if u.hp <= u.max_hp(game.world) / 2
-      return nil
-    end
-
-    # 次いで近接攻撃
-    if ua = uas.find { _1[1].id == :melee_attack }
-      return ua
-    end
-
-    # 相手が自拠点に近づいてきていれば戻る
-    min_dist = game.world.unitss[player.opponent.id].map {|u| distance(u.loc, game.world.buildings.of(player.id, :base).loc) }.min
-    if min_dist && min_dist < 4
-      ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
-        distance(loc, game.world.buildings.of(player.id, :base).loc)
-      }
-      return ua if ua
-    end
-
-    # 相手よりHP合計が多ければrage mode
-    if game.world.unitss[player.opponent.id].sum(&:hp) < game.world.unitss[player.id].sum(&:hp)
-      ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
-        game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent.id, :base).loc)
-      }
-      ua
-    else
-      # じわじわ成長を狙う
-      ua = uas.select {|_, a| a.id != :move }.sample
-      ua ||= uas.sample
-      ua
-    end
-  end
-
-  private_class_method def self.distance(loc0, loc1)
-    Math.sqrt((loc1.x - loc0.x) ** 2 + (loc1.y - loc0.y) ** 2)
-  end
-end
-
 if __FILE__ == $0
   require_relative 'turn'
   require_relative 'location'
   require_relative 'building'
   require_relative 'unit'
+  require_relative 'a_i'
 
   turn = Turn.new(
     num: 1,
@@ -406,8 +370,8 @@ if __FILE__ == $0
   players = [Human, Pest]
   loop do
     players.each do |player|
-      while ((action, locs) = turn.menu_actionable_actions(player).first) # TODO: sample
-        turn.menu_action!(player, action, locs.sample)
+      while ((action, loc) = AI.select_menu_actions(turn, player, turn.menu_actionable_actions(player)).sample)
+        turn.menu_action!(player, action, loc)
       end
 
       turn.actionable_units[player.id].each do |u|

@@ -26,8 +26,9 @@ class Turn
     build_farm:      ['建設/農地',       { seed: 1 },   :unit],
     build_trail:     ['建設/小道',       { wood: 1 },   :unit],
     build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
-    build_bomb:      ['建設/爆弾',       { ore: 3 },    :unit],
+    place_bomb:      ['設置/爆弾',       { ore: 3 },    :unit],
     spawn_unit:      ['ユニット生産',    { money: :f }, :base],
+    trigger_bomb:    ['爆弾起爆',        {},            :bomb],
   }.to_h {|id, (a, b, c)| [id, MenuAction.new(id: id, japanese: a, cost: b, location_type: c)] }
   def MENU_ACTIONS.at(game, player)
     transform_values {|v|
@@ -62,6 +63,8 @@ class Turn
         [@game.world.buildings.of(player.id, :base).loc].select {|loc|
           !@game.world.unitss[player.id].map(&:loc).include?(loc)
         }
+      when :bomb
+        @game.world.buildings[player.id].select { _1.id == :bomb }.map(&:loc)
       else
         raise "Invalid :location_type: #{v[:location_type]}"
       end
@@ -82,11 +85,26 @@ class Turn
         @game.world.buildings.delete_at(loc)
       end
 
-      @messages << "#{player.japanese}: #{loc.inspect}で農業をしました"
+      @messages << "#{player.japanese}: #{loc.inspect}を農地にしました"
       @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :seeds0, loc: loc)
     when :build_trail
-      @messages << "#{player.japanese}: #{loc.inspect}に小道を建設しました"
+      @messages << "#{player.japanese}: #{loc.inspect}を小道にしました"
       @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :trail, loc: loc)
+    when :place_bomb
+      @messages << "#{player.japanese}: #{loc.inspect}に爆弾を設置しました"
+      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :bomb0, loc: loc)
+    when :trigger_bomb
+      @messages << "#{player.japanese}: #{loc.inspect}の爆弾を起爆しました!"
+      @game.world.buildings.delete_at(loc)
+      [loc, *@game.world.neighbours(loc)].each do |nloc|
+        if b = @game.world.buildings.delete_at(nloc)
+          @messages << "#{player.japanese}: #{b.player.japanese} の #{b.id}を破壊しました"
+        end
+        if u = @game.world.unitss.values.flatten(1).find { _1.loc == nloc }
+          @messages << "#{player.japanese}: #{u.player.japanese} の ユニットが死亡しました"
+          @game.world.unitss[u.player.id].delete(u)
+        end
+      end
     when :spawn_unit
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
@@ -96,6 +114,11 @@ class Turn
       @actionable_units[player.id] += [new_unit]
     else
       p "Not implemented yet: #{action}"
+    end
+
+    if @game.winner
+      @messages << "#{game.winner.japanese} が勝利しました!"
+      @actionable_units = { human: [], pest: [] }
     end
   end
 
@@ -110,8 +133,7 @@ class Turn
       @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(1)
     in Building(player_id: ^(player.opponent.id)) => b
-      @messages << "#{player.japanese}: #{b.id}を略奪しました"
-      @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
+      @messages << "#{player.japanese}: #{b.id}を破壊しました"
       @game.world.buildings.delete_at(unit.loc)
     else
       # do nothing
@@ -132,6 +154,14 @@ class Turn
       unit.hp = [unit.hp, unit.max_hp(@game.world)].min
     when :harvest_woods
       @game.resources[player.id][:wood] = @game.resources[player.id][:wood].add_amount(1)
+      building = @game.world.buildings.at(loc)
+
+      @game.world.buildings.delete_at(loc)
+      if 1 < building.hp
+        @game.world.buildings[player.id] << building.with(hp: building.hp - 1)
+      end
+    when :mine_ore
+      @game.resources[player.id][:ore] = @game.resources[player.id][:ore].add_amount(1)
       building = @game.world.buildings.at(loc)
 
       @game.world.buildings.delete_at(loc)

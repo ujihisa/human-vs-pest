@@ -13,6 +13,8 @@ Building = Data.define(:player_id, :id, :loc, :hp) do
     seeds:     BuildingDefault.new(:seeds,     '🌱', '🧬', true,  -> { nil }),
     seeds0:    BuildingDefault.new(:seeds0,    '🌱', '🧬', true,  -> { nil }),
     trail:     BuildingDefault.new(:trail,     '🛤', '🛤', true,  -> { nil }),
+    bomb0:     BuildingDefault.new(:trail,     '💣', '💣', true,  -> { 1 }),
+    bomb:      BuildingDefault.new(:trail,     '💣', '💣', true,  -> { 1 }),
   }
   def initialize(id:, player_id:, loc:, hp: nil)
     hp ||= BUILDING_DEFAULTS.fetch(id).hp_f.()
@@ -42,11 +44,6 @@ Building = Data.define(:player_id, :id, :loc, :hp) do
   end
 
   def background_img
-    # Dirty hack
-    if player_id == :world
-      return "backgrounds/#{id}.png"
-    end
-
     ["backgrounds/#{player_id}_#{id}.png", "backgrounds/#{id}.png"].find {|path|
       File.exist?("app/assets/images/#{path}")
     }
