@@ -12,9 +12,46 @@
     <p>
       あなたは<strong><%= your_player.japanese %></strong>としてプレイしてます
     </p>
-    <p>
-      ここにヒントとかfocusしてるものの詳細が表示される予定
-    </p>
+    <% if focus %>
+      <h5>ユニット</h2>
+      <ul class="list-group">
+        <li class="list-group-item">
+          HP:
+          <strong>
+          <%= focus.hp %> / <%= focus.max_hp(turn.game.world) %>
+          </strong>
+        </li>
+        <li class="list-group-item">
+          HPは、1ターンそのユニットが何も行動しなければ3回復します。
+        </li>
+        <li class="list-group-item">
+          最大HPは、拠点からの移動距離によって変化します。
+        </li>
+        <li class="list-group-item">
+          拠点からの移動距離:
+          <%= turn.game.world.move_distance(your_player.id, turn.game.world.buildings.of(your_player.id, :base).loc, focus.loc) %>
+        </li>
+      </ul>
+
+      <% if b = turn.game.world.buildings.at(focus.loc) %>
+        <h5>建物</h2>
+        <ul class="list-group">
+          <li class="list-group-item">
+            <%= b.view %>
+          </li>
+          <li class="list-group-item">
+            所有者: <%= Player.find(b.player_id).japanese %>
+          </li>
+        </ul>
+      <% end %>
+    <% else %>
+      <p>
+      未行動のユニットを選択するか、メニューから行動を選択してください。
+      </p>
+      <p>
+      なければターン終了ボタンを押すか、エンターキーを押してください。
+      </p>
+    <% end %>
   </div>
   <div class="col-4">
     <% if turn.game.winner %>
