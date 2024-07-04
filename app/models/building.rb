@@ -37,7 +37,13 @@ Building = Data.define(:player, :id, :loc, :hp) do
   end
 
   def background_img
-    path = "backgrounds/#{id}.png"
-    File.exist?("app/assets/images/#{path}") ? path : nil
+    # Dirty hack
+    if player == :world
+      return "backgrounds/#{id}.png"
+    end
+
+    ["backgrounds/#{player.id}_#{id}.png", "backgrounds/#{id}.png"].find {|path|
+      File.exist?("app/assets/images/#{path}")
+    }
   end
 end
