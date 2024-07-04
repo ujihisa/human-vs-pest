@@ -16,6 +16,7 @@ class WorldTag < Live::View
 
     @your_player = @data[:your_player_id]&.then { Player.find(_1.to_sym) }
     @ai_player = @data[:ai_player_id]&.then { Player.find(_1.to_sym) }
+    @notify_turn_next = nil
   end
 
   private def publish_update!
@@ -65,6 +66,7 @@ class WorldTag < Live::View
             @@completed = { Human => false, Pest => false }
             @focus = nil
             @@turn = @@turn.next
+            @notify_turn_next = Time.now
             publish_update!
           end
         end
@@ -82,8 +84,13 @@ class WorldTag < Live::View
         completed: @@completed,
         hexes_view: @@turn.game.world.hexes_view(exclude_background: true),
         menu_action_focus: @menu_action_focus,
+        notify_turn_next: @notify_turn_next,
       },
     ))
+  ensure
+    if @notify_turn_next && 1 < Time.now - @notify_turn_next
+      @notify_turn_next = nil
+    end
   end
 
   def handle(event)
@@ -136,6 +143,7 @@ class WorldTag < Live::View
       if @@completed.all? { _2 }
         @@completed = { Human => false, Pest => false }
         @@turn = @@turn.next
+        @notify_turn_next = Time.now
       end
     when 'autoplay_all'
       return if @@autoplaying
@@ -160,6 +168,7 @@ class WorldTag < Live::View
 
           break if @@turn.game.winner
           @@turn = @@turn.next
+          @notify_turn_next = Time.now
         end
       end
     when 'reset'

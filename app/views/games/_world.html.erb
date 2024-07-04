@@ -129,6 +129,12 @@
     <% if turn.game.winner %>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
         <%= turn.game.winner.japanese %>の勝ち
+
+      </div>
+    <% end %>
+    <% if notify_turn_next %>
+      <div style="position: absolute; top: 30%; left: 50%; transform: translate(-30%,-50%); font-size: 64px;">
+        ターン <%= turn.num %>
       </div>
     <% end %>
 
