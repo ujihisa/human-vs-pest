@@ -55,7 +55,7 @@
               <%= turn.game.world.move_distance(your_player.id, turn.game.world.buildings.of(your_player.id, :base).loc, u.loc) %>)
             </li>
             <li class="list-group-item">
-              HPは、1ターンそのユニットが何も行動しなければ3回復します。
+              1ターンそのユニットが何も行動しなければ、HPが <strong>3</strong> 回復します。
             </li>
             <li class="list-group-item">
               <small>
@@ -115,6 +115,10 @@
       <p>
       未行動のユニットを選択するか、メニューから行動を選択してください。
       </p>
+      <ul>
+        <li>ユニットの行動は、各ユニットごとに1回のみです</li>
+        <li>メニューの行動は、条件を満たしていれば何度でも行えます</li>
+      </ul>
       <p>
       なければターン終了ボタンを押すか、エンターキーを押してください。
       </p>

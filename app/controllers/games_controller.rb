@@ -91,7 +91,7 @@ class WorldTag < Live::View
     case event[:type]
     when 'click'
       loc = Location.new(event[:x], event[:y])
-      @help_focus_loc = loc
+      @help_focus_loc = (@help_focus_loc == loc) ? nil : loc
 
       if @focus
         if @@turn.unit_actionable_locs(@your_player, @focus).include?(loc)
