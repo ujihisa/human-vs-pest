@@ -221,11 +221,10 @@ class GamesController < ApplicationController
 
     respond_to do |format|
       if @game.save
-        format.html { redirect_to game_url(@game), notice: "Game was successfully created." }
-        format.json { render :show, status: :created, location: @game }
+        # format.html { redirect_to game_url(@game), notice: "Game was successfully created." }
+        format.html { redirect_to game_url(@game) }
       else
         format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @game.errors, status: :unprocessable_entity }
       end
     end
   end
