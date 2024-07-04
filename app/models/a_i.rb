@@ -1,10 +1,12 @@
 # frozen_string_literal: true
 
 module AI
-  def self.select_menu_actions(turn, player, menu_actions)
-    menu_actions.filter_map {|action, locs|
+  def self.find_menu_action(turn, player, menu_actions)
+    menu_actions.each do |action, locs|
       locs = locs.select {|loc|
         case action
+        when :barricade
+          false
         when :place_bomb, :trigger_bomb
           neighbours = turn.game.world.neighbours(loc)
 
@@ -17,8 +19,9 @@ module AI
           true
         end
       }
-      [action, locs.sample] if !locs.empty?
-    }
+      return [action, locs.sample] if !locs.empty?
+    end
+    nil
   end
 
   # [Location, UnitAction] | nil

@@ -51,10 +51,10 @@ class WorldTag < Live::View
       @@ai_stared = true
       Async do
         until @@turn.game.winner do
-          while ((action, loc) = AI.select_menu_actions(@@turn, @ai_player, @@turn.menu_actionable_actions(@ai_player)).sample)
+          while ((action, loc) = AI.find_menu_action(@@turn, @ai_player, @@turn.menu_actionable_actions(@ai_player)))
             @@turn.menu_action!(@ai_player, action, loc)
           end
-          sleep 1
+          publish_update!; sleep 1
 
           @@turn.actionable_units[@ai_player.id].each do |u|
             locs = @@turn.unit_actionable_locs(@ai_player, u)
@@ -62,12 +62,13 @@ class WorldTag < Live::View
             @@turn.unit_action!(@ai_player, u, loc, ua.id) if ua
           end
           @@completed[@ai_player] = true
-          sleep 1
+          publish_update!; sleep 1
 
           if @@completed.all? { _2 }
             @@completed = { Human => false, Pest => false }
             @@focus = nil
             @@turn = @@turn.next
+            publish_update!
           end
         end
       end
@@ -143,7 +144,7 @@ class WorldTag < Live::View
         players = [Human, Pest]
         loop do
           players.each do |player|
-            while ((action, loc) = AI.select_menu_actions(@@turn, player, @@turn.menu_actionable_actions(player)).sample)
+            while ((action, loc) = AI.find_menu_action(@@turn, player, @@turn.menu_actionable_actions(player)))
               @@turn.menu_action!(player, action, loc)
             end
             publish_update!; sleep 0.1

@@ -97,6 +97,7 @@ class Turn
       @messages << "#{player.japanese}: #{loc.inspect}の爆弾を起爆しました!"
       @game.world.buildings.delete_at(loc)
       [loc, *@game.world.neighbours(loc)].each do |nloc|
+        next if @game.world.buildings.at(nloc)&.id == :pond
         if b = @game.world.buildings.delete_at(nloc)
           @messages << "#{player.japanese}: #{b.player.japanese} の #{b.id}を破壊しました"
         end
