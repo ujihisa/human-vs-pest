@@ -19,36 +19,11 @@ class Turn
     locs.select {|loc| !!UnitAction.reason(@game, unit, loc) }
   end
 
-  MenuAction = Data.define(:id, :japanese, :cost, :location_type)
-
-  MENU_ACTIONS = {
-    #                :japanese           :cost          :location_type, :overridable_buildings
-    build_farm:      ['建設/農地',       { seed: 1 },   :unit],
-    build_trail:     ['建設/小道',       { wood: 1 },   :unit],
-    build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
-    place_bomb:      ['設置/爆弾',       { ore: 3 },    :unit],
-    spawn_unit:      ['ユニット生産',    { money: :f }, :base],
-    trigger_bomb:    ['爆弾起爆',        {},            :bomb],
-  }.to_h {|id, (a, b, c)| [id, MenuAction.new(id: id, japanese: a, cost: b, location_type: c)] }
-  def MENU_ACTIONS.at(game, player)
-    transform_values {|v|
-      cost = v.cost.transform_values {|amount|
-        if amount == :f
-          amount = game.cost_to_spawn_unit(player.id)
-        else
-          amount
-        end
-      }
-      MenuAction.new(id: v.id, japanese: v.japanese, cost: cost, location_type: v.location_type)
-    }
-  end
-  MENU_ACTIONS.freeze
-
   # { Symbol => [Location] }
   def menu_actionable_actions(player)
     return {} if @game.winner
 
-    MENU_ACTIONS.at(@game, player).select {|_, menu_action|
+    MenuActions.at(@game, player).select {|_, menu_action|
       menu_action.cost.all? {|k, amount|
         @game.resources[player.id][k].amount >= amount
       }
@@ -74,7 +49,7 @@ class Turn
   end
 
   def menu_action!(player, action, loc)
-    MENU_ACTIONS.at(@game, player)[action].cost.each do |k, amount|
+    MenuActions.at(@game, player)[action].cost.each do |k, amount|
       @game.resources[player.id][k] = @game.resources[player.id][k].add_amount(-amount)
     end
 

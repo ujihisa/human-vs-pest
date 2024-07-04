@@ -154,6 +154,7 @@ if __FILE__ == $0
   require_relative 'building'
   require_relative 'unit'
   require_relative 'a_i'
+  require_relative 'menu_actions'
 
   turn = Turn.new(
     num: 1,

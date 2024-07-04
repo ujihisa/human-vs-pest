@@ -10,7 +10,7 @@ Building = Data.define(:player_id, :id, :loc, :hp, :_bd) do
     barricade: BuildingDefault.new(:barricade, '🚧', '🕸', false, -> { 8 }, '相手陣営だけ通行不能です。HPの数だけ攻撃を耐えます。'),
     pond:      BuildingDefault.new(:pond,      '🌊', '🌊', false, -> { nil }, '通行不能です'),
     base:      BuildingDefault.new(:base,      '🏠', '🕳', true,  -> { nil }, 'これを失った陣営がゲームオーバーです'),
-    fruits:    BuildingDefault.new(:fruits,    '🍓', '🍄', true,  -> { nil }, '自陣営のものならば、収穫すると種とお金が得られます。また育つと再収穫できます'),
+    fruits:    BuildingDefault.new(:fruits,    '🍓', '🍄', true,  -> { nil }, '自陣営のものならば、ユニットがそこに立つだけで自動で収穫してくれます。収穫すると、種とお金が得られます。また育つと再収穫できます。'),
     flowers:   BuildingDefault.new(:flowers,   '🌷', '🦠', true,  -> { nil }, '次ターンで収穫可能です'),
     seeds:     BuildingDefault.new(:seeds,     '🌱', '🧬', true,  -> { nil }, '...?'),
     seeds0:    BuildingDefault.new(:seeds0,    '🌱', '🧬', true,  -> { nil }, '...?'),
@@ -22,7 +22,9 @@ Building = Data.define(:player_id, :id, :loc, :hp, :_bd) do
   def_delegators(:_bd, :human_emoji, :pest_emoji, :passable, :description)
 
   def initialize(id:, player_id:, loc:, hp: nil, _bd: nil)
-    _bd ||=  BUILDING_DEFAULTS.fetch(id)
+    # 引数の_bdはwith()のために必要だけど、単に無視する。idを主としたい。
+    _bd =  BUILDING_DEFAULTS.fetch(id)
+
     hp ||= _bd.hp_f.()
     super(player_id: player_id, id:, loc:, hp:, _bd:)
   end

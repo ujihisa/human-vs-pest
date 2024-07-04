@@ -6,7 +6,7 @@
   });
 </script>
 
-<% menu_actionable_locs = menu_action ? turn.menu_actionable_actions(your_player).fetch(menu_action.id, []) : [] %>
+<% menu_actionable_locs = menu_action_focus ? turn.menu_actionable_actions(your_player).fetch(menu_action_focus.id, []) : [] %>
 <div class="row">
   <div class="col-4 text-start">
     <p>
@@ -20,7 +20,7 @@
     <% if help_focus_loc %>
       <% if b = turn.game.world.buildings.at(help_focus_loc) %>
         <div class="container">
-          <h5>建物</h2>
+          <h5>建物</h5>
           <ul class="list-group">
             <li class="list-group-item">
               <%= b.view %>
@@ -44,7 +44,7 @@
         <!-- 観戦モードではユニットの情報は表示しない -->
       <% elsif u = turn.game.world.unitss[your_player.id].find { _1.loc == help_focus_loc } %>
         <div class="container">
-          <h5>ユニット</h2>
+          <h5>ユニット</h5>
           <ul class="list-group">
             <li class="list-group-item">
               HP:
@@ -58,7 +58,54 @@
               HPは、1ターンそのユニットが何も行動しなければ3回復します。
             </li>
             <li class="list-group-item">
-              最大HPは、拠点からの移動距離によって変化します。
+              <small>
+                最大HPは、拠点からの移動距離によって変化します。
+              </small>
+            </li>
+          </ul>
+        </div>
+      <% end %>
+
+      <% if menu_action_focus %>
+        <div class="container">
+          <h5>メニュー</h5>
+          <ul class="list-group">
+            <li class="list-group-item">
+              <p>
+                <%= menu_action_focus.japanese %>
+              </p>
+              <p>
+                <%= menu_action_focus.description %>
+              </p>
+            </li>
+            <li class="list-group-item">
+              消費する資源:
+              <% menu_action_focus.cost.each do |k, amount| %>
+                <%= PlayerResource.new(resource_id: k, amount: amount).view %>
+              <% end %>
+            </li>
+            <li class="list-group-item">
+              対象:
+              <% case menu_action_focus.location_type
+                 when :unit %>
+                自陣のいずれかのユニットの位置
+              <% when :base %>
+                自拠点 (ただしユニットがその位置にいない場合に限る)
+              <% when :bomb %>
+                設置積みの爆弾
+              <% else %>
+                (TODO: 説明文が未実装です)
+              <% end %>
+            </li>
+            <li class="list-group-item">
+              <small>
+              <p>
+              右のメニューにある行動リストは、あなたの所有している資源を消費するかわりに、ユニットの行動に関わらず任意のタイミングで発動できます。
+              </p>
+              <p>
+              対象となる位置を指定してください。
+              </p>
+              </small>
             </li>
           </ul>
         </div>
@@ -126,7 +173,7 @@
               <%= ActionController::Base.helpers.image_tag("backgrounds/menu_actionable.png", style: 'height: 64px; width: 64px;') %>
             </div>
             <div class="hex text-nowrap" style="font-size: 16px;">
-              <%= menu_action.japanese %>
+              <%= menu_action_focus.japanese %>
             </div>
           <% end %>
 
@@ -155,13 +202,13 @@
           </li>
           <% menu_actionable_actions = turn.menu_actionable_actions(your_player) %>
           <li class="list-group-item">
-            <% Turn::MENU_ACTIONS.at(turn.game, your_player).each do |k, v| %>
+            <% MenuActions.at(turn.game, your_player).each do |k, v| %>
               <div class="row align-items-start">
                 <div class="col">
                   <% available = menu_actionable_actions.key?(k) %>
                   <button
                       data-bs-toggle="button"
-                      class="btn <%= available ? 'btn-secondary' : 'btn-outline' %> <%= 'active' if menu_action&.id == k %>"
+                      class="btn <%= available ? 'btn-secondary' : 'btn-outline' %> <%= 'active' if menu_action_focus&.id == k %>"
                       <%= 'disabled' if !available %>
                       onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
                     <nobr><%= v.japanese %></nobr>

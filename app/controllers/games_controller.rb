@@ -5,12 +5,9 @@ require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
   @@turn = Turn.new(num: 1, game: GameState.new(world: World.create(size_x: 5, size_y: 8)))
-  @@turn.game
-  @@focus = nil
   @@completed = { Human => false, Pest => false }
   @@autoplaying = false
   @@ai_stared = false
-  @@menu_action = nil
   @@subscribers = {}
 
   # both static and websocket
@@ -66,7 +63,7 @@ class WorldTag < Live::View
 
           if @@completed.all? { _2 }
             @@completed = { Human => false, Pest => false }
-            @@focus = nil
+            @focus = nil
             @@turn = @@turn.next
             publish_update!
           end
@@ -81,10 +78,10 @@ class WorldTag < Live::View
         your_player: @your_player,
         turn: @@turn,
         help_focus_loc: @help_focus_loc,
-        focus: @@focus,
+        focus: @focus,
         completed: @@completed,
         hexes_view: @@turn.game.world.hexes_view(exclude_background: true),
-        menu_action: @@menu_action,
+        menu_action_focus: @menu_action_focus,
       },
     ))
   end
@@ -96,44 +93,44 @@ class WorldTag < Live::View
       loc = Location.new(event[:x], event[:y])
       @help_focus_loc = loc
 
-      if @@focus
-        if @@turn.unit_actionable_locs(@your_player, @@focus).include?(loc)
-          action = UnitAction.reason(@@turn.game, @@focus, loc)
-          @@turn.unit_action!(@your_player, @@focus, loc, action.id)
+      if @focus
+        if @@turn.unit_actionable_locs(@your_player, @focus).include?(loc)
+          action = UnitAction.reason(@@turn.game, @focus, loc)
+          @@turn.unit_action!(@your_player, @focus, loc, action.id)
         end
-        @@focus = nil
+        @focus = nil
       else
-        if @@menu_action
-          locs = @@turn.menu_actionable_actions(@your_player)[@@menu_action.id]
+        if @menu_action_focus
+          locs = @@turn.menu_actionable_actions(@your_player)[@menu_action_focus.id]
           if locs && locs.include?(loc)
-            @@turn.menu_action!(@your_player, @@menu_action.id, loc)
+            @@turn.menu_action!(@your_player, @menu_action_focus.id, loc)
           end
-          @@menu_action = nil
+          @menu_action_focus = nil
         else
           if human = @@turn.actionable_units[@your_player.id].find { _1.loc == loc }
-            @@focus = human
+            @focus = human
           end
         end
       end
     when 'menu'
-      @@focus = nil
+      @focus = nil
 
-      menu_action = Turn::MENU_ACTIONS[event[:menu].to_sym]
-      case menu_action
+      menu_action_focus = MenuActions[event[:menu].to_sym]
+      case menu_action_focus
       when nil
         # do nothing
-      when @@menu_action
-        @@menu_action = nil
+      when @menu_action_focus
+        @menu_action_focus = nil
       else
-        @@menu_action = menu_action
+        @menu_action_focus = menu_action_focus
       end
     when 'rightclick'
-      @@focus = nil
-      @@menu_action = nil
+      @focus = nil
+      @menu_action_focus = nil
     when 'complete'
       @@completed[@your_player] = true
-      @@focus = nil
-      @@menu_action = nil
+      @focus = nil
+      @menu_action_focus = nil
       publish_update!
 
       if @@completed.all? { _2 }
