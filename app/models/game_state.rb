@@ -92,14 +92,14 @@ class World
 
     buildings = {
       human: [
-        Building.new(player: Human, id: :base, loc: bases[:human]),
+        Building.new(player_id: :human, id: :base, loc: bases[:human]),
       ],
       pest: [
-        Building.new(player: Pest, id: :base, loc: bases[:pest]),
+        Building.new(player_id: :pest, id: :base, loc: bases[:pest]),
       ],
       world: [
-        *trees.map { Building.new(player: :world, id: :tree, loc: _1) },
-        *ponds.map { Building.new(player: :world, id: :pond, loc: _1) },
+        *trees.map { Building.new(player_id: :world, id: :tree, loc: _1) },
+        *ponds.map { Building.new(player_id: :world, id: :pond, loc: _1) },
       ]
     }
     new(

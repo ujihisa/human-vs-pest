@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-Building = Data.define(:player, :id, :loc, :hp) do
+Building = Data.define(:player_id, :id, :loc, :hp) do
   BuildingDefault = Data.define(:id, :human_emoji, :pest_emoji, :passable, :hp_f)
   BUILDING_DEFAULTS = {
     tree:      BuildingDefault.new(:tree,      '🌲', '🌲', false, -> { rand(1..3) }),
@@ -14,9 +14,14 @@ Building = Data.define(:player, :id, :loc, :hp) do
     seeds0:    BuildingDefault.new(:seeds0,    '🌱', '🧬', true,  -> { nil }),
     trail:     BuildingDefault.new(:trail,     '🛤', '🛤', true,  -> { nil }),
   }
-  def initialize(id:, player:, loc:, hp: nil)
+  def initialize(id:, player_id:, loc:, hp: nil)
     hp ||= BUILDING_DEFAULTS.fetch(id).hp_f.()
-    super(player:, id:, loc:, hp:)
+    super(player_id: player_id, id:, loc:, hp:)
+  end
+
+  def player
+    return :world if player_id == :world
+    Player.find(player_id)
   end
 
   # ownerは無条件で通行可能なので、ownerでないと仮定する
@@ -26,23 +31,23 @@ Building = Data.define(:player, :id, :loc, :hp) do
 
   def view
     bd = BUILDING_DEFAULTS.fetch(id)
-    case player
-    when Human, :world
+    case player_id
+    when :human, :world
       bd.human_emoji
-    when Pest
+    when :pest
       bd.pest_emoji
     else
-      raise "Must not happen: invalid player #{player}"
+      raise "Must not happen: invalid player_id #{player_id}"
     end
   end
 
   def background_img
     # Dirty hack
-    if player == :world
+    if player_id == :world
       return "backgrounds/#{id}.png"
     end
 
-    ["backgrounds/#{player.id}_#{id}.png", "backgrounds/#{id}.png"].find {|path|
+    ["backgrounds/#{player_id}_#{id}.png", "backgrounds/#{id}.png"].find {|path|
       File.exist?("app/assets/images/#{path}")
     }
   end

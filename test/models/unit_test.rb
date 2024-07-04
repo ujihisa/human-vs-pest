@@ -65,8 +65,8 @@ class TestUnit < Minitest::Test
     # |　　 |.....|🕳　 |.....|　　 |
     # |.....|　　 |.....|　　 |.....|
     # ===============================
-    @world.buildings[:human] << Building.new(player: Human, id: :trail, loc: Location.new(1, 2))
-    @world.buildings[:human] << Building.new(player: Human, id: :trail, loc: Location.new(2, 3))
+    @world.buildings[:human] << Building.new(player_id: :human, id: :trail, loc: Location.new(1, 2))
+    @world.buildings[:human] << Building.new(player_id: :human, id: :trail, loc: Location.new(2, 3))
     @unit.loc = Location.new(1, 1)
 
     expected_locations =

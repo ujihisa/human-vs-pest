@@ -83,10 +83,10 @@ class Turn
       end
 
       @messages << "#{player.japanese}: #{loc.inspect}で農業をしました"
-      @game.world.buildings[player.id] << Building.new(player: player, id: :seeds0, loc: loc)
+      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :seeds0, loc: loc)
     when :build_trail
       @messages << "#{player.japanese}: #{loc.inspect}に小道を建設しました"
-      @game.world.buildings[player.id] << Building.new(player: player, id: :trail, loc: loc)
+      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :trail, loc: loc)
     when :spawn_unit
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
@@ -102,14 +102,14 @@ class Turn
   def unit_passive_action!(player, unit)
     opponent = player.opponent
     case @game.world.buildings.at(unit.loc)
-    in Building(player: ^player, id: :fruits) => b
+    in Building(player_id: ^(player.id), id: :fruits) => b
       @messages << "#{player.japanese}: #{b.id}を収穫しました"
       @game.world.buildings.delete_at(unit.loc)
       @game.world.buildings[player.id] << b.with(id: :seeds0)
 
       @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(1)
-    in Building(player: ^(player.opponent)) => b
+    in Building(player_id: ^(player.opponent.id)) => b
       @messages << "#{player.japanese}: #{b.id}を略奪しました"
       @game.resources[player.id][:money] = @game.resources[player.id][:money].add_amount(1)
       @game.world.buildings.delete_at(unit.loc)
@@ -140,7 +140,7 @@ class Turn
       end
     when :build_farm
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(-1)
-      @game.world.buildings[player.id] << Building.new(player: player, id: :seeds0, loc: loc)
+      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :seeds0, loc: loc)
     when :melee_attack
       target_unit = @game.world.unitss[player.opponent.id].find { _1.loc == loc }
       if unit.hp == target_unit.hp
