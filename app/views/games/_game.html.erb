@@ -1,7 +1,12 @@
 <div id="<%= dom_id game %>">
   <p>
-    <strong>Player name:</strong>
-    <%= game.player_name %>
+    <strong>人間側のプレイヤの名前:</strong>
+    <%= game.human_you_name %>
+  </p>
+
+  <p>
+    <strong>害虫側のプレイヤの名前:</strong>
+    <%= game.pest_you_name %>
   </p>
 
   <%- if game.finished_at %>

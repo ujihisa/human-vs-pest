@@ -4,16 +4,18 @@ require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
   @@turn = Turn.new(num: 1, game: GameState.new(world: World.create(size_x: 5, size_y: 8)))
-  @@game = @@turn.game
-  @@human_focus = nil
-  @@human_flush = nil
+  @@turn.game
+  @@focus = nil
   @@completed = { Human => false, Pest => false }
   @@autoplaying = false
-  @@pest_ai_stared = false
+  @@ai_stared = false
   @@menu_action = nil
 
   def initialize(...)
     super(...)
+
+    @your_player = @data[:your_player_id]&.then { Player.find(_1.to_sym) }
+    @ai_player = @data[:ai_player_id]&.then { Player.find(_1.to_sym) }
   end
 
   def bind(page)
@@ -26,28 +28,27 @@ class WorldTag < Live::View
       end
     end
 
-    # TODO: とりあえずいまは害虫側は強制的にAI実行する
-    if !@@pest_ai_stared
-      @@pest_ai_stared = true
+    # AI側を強制実行
+    if @ai_player && !@@ai_stared
+      @@ai_stared = true
       Async do
-        until @@game.winner do
-          player = Pest
-          while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
-            @@turn.menu_action!(player, action, locs.sample)
+        until @@turn.game.winner do
+          while ((action, locs) = @@turn.menu_actionable_actions(@ai_player).first) # TODO: sample
+            @@turn.menu_action!(@ai_player, action, locs.sample)
           end
           sleep 1
 
-          @@turn.actionable_units[player.id].each do |u|
-            locs = @@turn.unit_actionable_locs(player, u)
-            (loc, ua) = AI.unit_action_for(@@game, player, u, locs)
-            @@turn.unit_action!(player, u, loc, ua.id) if ua
+          @@turn.actionable_units[@ai_player.id].each do |u|
+            locs = @@turn.unit_actionable_locs(@ai_player, u)
+            (loc, ua) = AI.unit_action_for(@@turn.game, @ai_player, u, locs)
+            @@turn.unit_action!(@ai_player, u, loc, ua.id) if ua
           end
-          @@completed[player] = true
+          @@completed[@ai_player] = true
           sleep 1
 
           if @@completed.all? { _2 }
             @@completed = { Human => false, Pest => false }
-            @@human_focus = nil
+            @@focus = nil
             @@turn = @@turn.next
           end
         end
@@ -58,46 +59,42 @@ class WorldTag < Live::View
   def render(builder)
     builder.append(ERB.new(File.read('app/views/games/_world.html.erb')).result_with_hash(
       {
+        your_player: @your_player,
         turn: @@turn,
-        game: @@game,
-        human_focus: @@human_focus,
-        human_flush: @@human_flush,
+        focus: @@focus,
         completed: @@completed,
-        hexes_view: @@game.world.hexes_view(exclude_background: true),
+        hexes_view: @@turn.game.world.hexes_view(exclude_background: true),
         menu_action: @@menu_action,
       },
     ))
   end
 
   def handle(event)
-    @@human_flush = nil
-    player = Human # TODO: 今は人間側しか操作できない...
-
     pp event
     case event[:type]
     when 'click'
       loc = Location.new(event[:x], event[:y])
-      if @@human_focus
-        if @@turn.unit_actionable_locs(Human, @@human_focus).include?(loc)
-          action = UnitAction.reason(@@turn.game, @@human_focus, loc)
-          @@turn.unit_action!(Human, @@human_focus, loc, action.id)
+      if @@focus
+        if @@turn.unit_actionable_locs(@your_player, @@focus).include?(loc)
+          action = UnitAction.reason(@@turn.game, @@focus, loc)
+          @@turn.unit_action!(@your_player, @@focus, loc, action.id)
         end
-        @@human_focus = nil
+        @@focus = nil
       else
         if @@menu_action
-          locs = @@turn.menu_actionable_actions(player)[@@menu_action.id]
+          locs = @@turn.menu_actionable_actions(@your_player)[@@menu_action.id]
           if locs && locs.include?(loc)
-            @@turn.menu_action!(player, @@menu_action.id, loc)
+            @@turn.menu_action!(@your_player, @@menu_action.id, loc)
           end
           @@menu_action = nil
         else
-          if human = @@turn.actionable_units[:human].find { _1.loc == loc }
-            @@human_focus = human
+          if human = @@turn.actionable_units[@your_player.id].find { _1.loc == loc }
+            @@focus = human
           end
         end
       end
     when 'menu'
-      @@human_focus = nil
+      @@focus = nil
 
       menu_action = Turn::MENU_ACTIONS[event[:menu].to_sym]
       case menu_action
@@ -109,13 +106,11 @@ class WorldTag < Live::View
         @@menu_action = menu_action
       end
     when 'rightclick'
-      @@human_focus = nil
+      @@focus = nil
       @@menu_action = nil
     when 'complete'
-      player = Player.find(event[:player_id].to_sym)
-
-      @@completed[player] = true
-      @@human_focus = nil
+      @@completed[@your_player] = true
+      @@focus = nil
       @@menu_action = nil
       update!
 
@@ -137,14 +132,14 @@ class WorldTag < Live::View
 
             @@turn.actionable_units[player.id].each do |u|
               locs = @@turn.unit_actionable_locs(player, u)
-              (loc, ua) = AI.unit_action_for(@@game, player, u, locs)
+              (loc, ua) = AI.unit_action_for(@@turn.game, player, u, locs)
               @@turn.unit_action!(player, u, loc, ua.id) if ua
             end
             update!; sleep 0.1
           end
           sleep 0.3
 
-          break if @@game.winner
+          break if @@turn.game.winner
           @@turn = @@turn.next
         end
       end
@@ -165,7 +160,20 @@ class GamesController < ApplicationController
 
   # GET /games/1 or /games/1.json
   def show
-    @world_tag = WorldTag.new('world')
+    your_player_id =
+      case session[:you]
+      when @game.human_you_name
+        :human
+      when @game.pest_you_name
+        :pest
+      end
+    ai_player_id =
+      if @game.human_you_name.nil?
+        :human
+      elsif @game.pest_you_name.nil?
+        :pest
+      end
+    @world_tag = WorldTag.new('world', your_player_id: your_player_id, ai_player_id: ai_player_id)
   end
 
   skip_before_action :verify_authenticity_token, only: :live
@@ -179,12 +187,18 @@ class GamesController < ApplicationController
 
   # GET /games/new
   def new
+    if session[:you].nil?
+      redirect_to you_path
+    end
     @game = Game.new
   end
 
   # POST /games or /games.json
   def create
-    @game = Game.new(game_params)
+    @game = Game.new(
+      human_you_name: game_params[:human_you_name].presence,
+      pest_you_name: game_params[:pest_you_name].presence,
+    )
 
     respond_to do |format|
       if @game.save
@@ -205,6 +219,6 @@ class GamesController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def game_params
-      params.require(:game).permit(:player_name)
+      params.require(:game).permit(:human_you_name, :pest_you_name)
     end
 end

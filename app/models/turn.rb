@@ -22,8 +22,8 @@ class Turn
   MenuAction = Data.define(:id, :japanese, :cost, :location_type)
 
   MENU_ACTIONS = {
-    #                 :japanese          :cost          :location_type, :overridable_buildings
-    build_farm:         ['建設/農地',       { seed: 1 },   :unit],
+    #                :japanese           :cost          :location_type, :overridable_buildings
+    build_farm:      ['建設/農地',       { seed: 1 },   :unit],
     build_trail:     ['建設/小道',       { wood: 1 },   :unit],
     build_barricade: ['建設/バリケード', { wood: 2 },   :unit],
     build_bomb:      ['建設/爆弾',       { ore: 3 },    :unit],
@@ -49,7 +49,12 @@ class Turn
 
     MENU_ACTIONS.at(@game, player).select {|_, menu_action|
       menu_action.cost.all? {|k, amount|
-        @game.resources[player.id][k].amount >= amount
+        begin
+          @game.resources[player.id][k].amount >= amount
+        rescue => e # TODO: このrescueはデバグ終わったら即座に消す
+          pp [player.id, k, amount, @game.resources]
+          raise e
+        end
       }
     }.transform_values {|m|
       case m.location_type

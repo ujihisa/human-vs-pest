@@ -9,4 +9,7 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   root "games#new"
+
+  get '/you', to: 'you#show'
+  put '/you', to: 'you#update'
 end

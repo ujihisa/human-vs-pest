@@ -1,6 +1,36 @@
-<h1>New game</h1>
+<h1>ゲームを開始</h1>
 
-<%= render "form", game: @game %>
+<%= form_with(model: @game) do |form| %>
+  <% if @game.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(@game.errors.count, "error") %> prohibited this @game from being saved:</h2>
+
+      <ul>
+        <% @game.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="alert alert-primary" role="alert">
+    名前として空欄を設定すると、AIが担当します。
+  </div>
+
+  <div>
+    <%= form.label :human_you_name, '人間側のプレイヤの名前', style: "display: block" %>
+    <%= form.text_field :human_you_name, value: session[:you] %>
+  </div>
+
+  <div>
+    <%= form.label :pest_you_name, '害虫側のプレイヤの名前', style: "display: block" %>
+    <%= form.text_field :pest_you_name %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>
 
 <br>
 

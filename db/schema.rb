@@ -12,7 +12,8 @@
 
 ActiveRecord::Schema[7.1].define(version: 2024_06_26_044847) do
   create_table "games", force: :cascade do |t|
-    t.string "player_name"
+    t.string "human_you_name"
+    t.string "pest_you_name"
     t.datetime "finished_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

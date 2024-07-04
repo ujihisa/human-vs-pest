@@ -1,11 +1,6 @@
+<h1><%= @game.human_you_name || 'AI' %> vs <%= @game.pest_you_name || 'AI' %></h1>
 <p style="color: green"><%= notice %></p>
-
-<%= render @game %>
 
 <div class="container text-center">
   <%= @world_tag.to_html %>
-</div>
-
-<div>
-  <%= link_to "Back to games", games_path %>
 </div>

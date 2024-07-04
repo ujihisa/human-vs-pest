@@ -1,27 +1,32 @@
 <script>
   document.addEventListener('keyup', function(event) {
     if (event.key === 'Enter') {
-      live.forward('world', {type: 'complete', player_id: 'human'});
+      live.forward('world', {type: 'complete'});
     }
   });
 </script>
 
-<% menu_actionable_locs = menu_action ? turn.menu_actionable_actions(Human).fetch(menu_action.id, []) : [] %>
+<% menu_actionable_locs = menu_action ? turn.menu_actionable_actions(your_player).fetch(menu_action.id, []) : [] %>
 <div class="row">
-  <div class="col-4">
-    ここにヒントとかfocusしてるものの詳細が表示される予定
+  <div class="col-4 text-start">
+    <p>
+      あなたは<strong><%= your_player.japanese %></strong>としてプレイしてます
+    </p>
+    <p>
+      ここにヒントとかfocusしてるものの詳細が表示される予定
+    </p>
   </div>
   <div class="col-4">
-    <% if game.winner %>
+    <% if turn.game.winner %>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
-        <%= game.winner.japanese %>の勝ち
+        <%= turn.game.winner.japanese %>の勝ち
       </div>
     <% end %>
 
     <% hexes_view.each_with_index do |hexes_y, y| %>
       <% hexes_y.each_with_index do |hex, x| %>
         <% loc = Location.new(x, y) %>
-        <% building = game.world.buildings.at(loc) %>
+        <% building = turn.game.world.buildings.at(loc) %>
         <% background_img = building&.background_img %>
         <% padding_top = x.even? ? 64*y : 64*y + 32 %>
         <% padding_left = 48*x %>
@@ -34,7 +39,7 @@
             <%= ActionController::Base.helpers.image_tag(background_img || 'backgrounds/nil.png', style: 'height: 64px; width: 64px;') %>
           </div>
           <div class="hex size64">
-            <% if human_focus&.loc == loc %>
+            <% if focus&.loc == loc %>
               <%= ActionController::Base.helpers.image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
             <% end %>
           </div>
@@ -48,13 +53,13 @@
               <%= building&.hp %>
             </div>
           <% end %>
-          <% if human_focus  %>
-            <% if turn.unit_actionable_locs(Human, human_focus).include?(loc) %>
+          <% if focus  %>
+            <% if turn.unit_actionable_locs(your_player, focus).include?(loc) %>
               <div class="hex size64">
                 <%= ActionController::Base.helpers.image_tag("backgrounds/unit_actionable.png", style: 'height: 64px; width: 64px;') %>
               </div>
               <div class="hex text-nowrap" style="font-size: 16px;">
-                <%= UnitAction.reason(game, human_focus, loc).japanese %>
+                <%= UnitAction.reason(turn.game, focus, loc).japanese %>
               </div>
             <% end %>
           <% end %>
@@ -83,66 +88,49 @@
       ターン <%= turn.num %>
     </div>
 
-    <% [Human, Pest].each do |player| %>
-      <div class="container">
-        <h5><%= player.japanese %></h5>
-        <ul class="list-group">
-          <li class="list-group-item">
-            資源:
-            <%= game.resources[player.id].values.map { _1.view }.join('') %>
-          </li>
-          <% menu_actionable_actions = turn.menu_actionable_actions(player) %>
-          <li class="list-group-item">
-            <% Turn::MENU_ACTIONS.at(game, player).each do |k, v| %>
-              <div class="row align-items-start">
-                <div class="col">
-                  <% available = menu_actionable_actions.key?(k) %>
-                  <button
-                      data-bs-toggle="button"
-                      class="btn <%= available ? 'btn-secondary' : 'btn-outline' %> <%= 'active' if menu_action&.id == k %>"
-                      <%= 'disabled' if !available %>
-                      onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
-                    <nobr><%= v.japanese %></nobr>
-                  </button>
-                </div>
-                <div class="col">
-                  <small>
-                    <% v.cost.each do |k, amount| %>
-                      <%= PlayerResource.new(resource_id: k, amount: amount).view %>
-                    <% end %>
-                  </small>
-                </div>
-              </div>
-            <% end %>
-          </li>
-          <li class="list-group-item">
-            <div class="d-grid gap-2 col-6 mx-auto">
-              <button
-                  class="btn btn-secondary"
-                  <%= 'disabled' if completed[player] || game.winner %>
-                  onclick="live.forward('world', {type: 'complete', player_id: '<%= player.id %>'});">
-                <nobr>
-                  ターン終了↵
-                </nobr>
-              </button>
-            </div>
-          </li>
-        </ul>
-
-        <% if human_flush %>
-          <%= human_flush %>
-        <% end %>
-      </div>
-    <% end %>
-
     <div class="container">
-      <h5>メッセージ</h5>
+      <h5><%= your_player.japanese %></h5>
       <ul class="list-group">
-        <% turn.messages.each do |m| %>
-          <li class="list-group-item">
-            <%= m %>
-          </li>
-        <% end %>
+        <li class="list-group-item">
+          資源:
+          <%= turn.game.resources[your_player.id].values.map { _1.view }.join('') %>
+        </li>
+        <% menu_actionable_actions = turn.menu_actionable_actions(your_player) %>
+        <li class="list-group-item">
+          <% Turn::MENU_ACTIONS.at(turn.game, your_player).each do |k, v| %>
+            <div class="row align-items-start">
+              <div class="col">
+                <% available = menu_actionable_actions.key?(k) %>
+                <button
+                    data-bs-toggle="button"
+                    class="btn <%= available ? 'btn-secondary' : 'btn-outline' %> <%= 'active' if menu_action&.id == k %>"
+                    <%= 'disabled' if !available %>
+                    onclick="live.forward('world', {type: 'menu', menu: '<%= k %>'});">
+                  <nobr><%= v.japanese %></nobr>
+                </button>
+              </div>
+              <div class="col">
+                <small>
+                  <% v.cost.each do |k, amount| %>
+                    <%= PlayerResource.new(resource_id: k, amount: amount).view %>
+                  <% end %>
+                </small>
+              </div>
+            </div>
+          <% end %>
+        </li>
+        <li class="list-group-item">
+          <div class="d-grid gap-2 col-6 mx-auto">
+            <button
+                class="btn btn-secondary"
+                <%= 'disabled' if completed[your_player] || turn.game.winner %>
+                onclick="live.forward('world', {type: 'complete'});">
+              <nobr>
+                ターン終了↵
+              </nobr>
+            </button>
+          </div>
+        </li>
       </ul>
     </div>
 
@@ -154,7 +142,17 @@
       <input class="btn btn-secondary" type="submit"
              value="Reset"
              onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
+    </div>
 
+    <div class="container">
+      <h5>メッセージ</h5>
+      <ul class="list-group">
+        <% turn.messages.each do |m| %>
+          <li class="list-group-item">
+            <%= m %>
+          </li>
+        <% end %>
+      </ul>
     </div>
   </div>
 </div>

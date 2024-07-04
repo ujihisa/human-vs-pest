@@ -1,0 +1,33 @@
+<div class="container">
+  <h1>Human vs Pest</h1>
+
+  <p style="color: green"><%= notice %></p>
+
+  <div class="container">
+    <%= form_tag('/you', method: :put, class: 'row g-3') do %>
+      <div class="col-auto">
+        <label for="name" class="form-label">あなたの名前</label>
+      </div>
+      <div class="col-auto">
+        <input type="text" class="form-control" name="you_name" placeholder="ujihisa" value="<%= @you_name %>" aria-describedby="nameHelpBlock" required>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary mb-3">
+          <% if @you_name %>
+            変更
+          <% else %>
+            設定
+          <% end %>
+        </button>
+      </div>
+    <% end %>
+    <div id="nameHelpBlock" class="form-text">
+      同一性判定に使います。他の人とかぶらなさそうな名前を設定してください。
+    </div>
+  </div>
+
+  <div class="container text-center">
+    ゲームを開始する
+    <%= link_to "New game", new_game_path, class: 'btn btn-primary' %>
+  </div>
+</div>
