@@ -34,8 +34,9 @@ class WorldTag < Live::View
     @@subscribers[self] = Async::Queue.new
 
     Async do
-      while @page
-        case mes = @@subscribers[self].dequeue
+      while mes = @@subscribers[self].dequeue
+        break unless @page
+        case mes
         when :update!
           update!
         else
