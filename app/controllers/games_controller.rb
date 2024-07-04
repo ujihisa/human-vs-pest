@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'async/queue'
 require 'async/websocket/adapters/rails'
 
 class WorldTag < Live::View
@@ -10,7 +11,9 @@ class WorldTag < Live::View
   @@autoplaying = false
   @@ai_stared = false
   @@menu_action = nil
+  @@subscribers = {}
 
+  # both static and websocket
   def initialize(...)
     super(...)
 
@@ -18,19 +21,34 @@ class WorldTag < Live::View
     @ai_player = @data[:ai_player_id]&.then { Player.find(_1.to_sym) }
   end
 
+  private def publish_update!
+    @@subscribers.each_value do |q|
+      q << :update!
+    end
+  end
+
+  # websocket only
   def bind(page)
     super # @page = page
 
+    @@subscribers[self] = Async::Queue.new
+
     Async do
       while @page
-        update!
-        sleep 1
+        case mes = @@subscribers[self].dequeue
+        when :update!
+          update!
+        else
+          raise "Unknown message: #{mes}"
+        end
       end
+      @@subscribers.delete(self)
     end
 
     # AI側を強制実行
     if @ai_player && !@@ai_stared
       @@ai_stared = true
+      pp :ai_started
       Async do
         until @@turn.game.winner do
           while ((action, locs) = @@turn.menu_actionable_actions(@ai_player).first) # TODO: sample
@@ -112,7 +130,7 @@ class WorldTag < Live::View
       @@completed[@your_player] = true
       @@focus = nil
       @@menu_action = nil
-      update!
+      publish_update!
 
       if @@completed.all? { _2 }
         @@completed = { Human => false, Pest => false }
@@ -128,14 +146,14 @@ class WorldTag < Live::View
             while ((action, locs) = @@turn.menu_actionable_actions(player).first) # TODO: sample
               @@turn.menu_action!(player, action, locs.sample)
             end
-            update!; sleep 0.1
+            publish_update!; sleep 0.1
 
             @@turn.actionable_units[player.id].each do |u|
               locs = @@turn.unit_actionable_locs(player, u)
               (loc, ua) = AI.unit_action_for(@@turn.game, player, u, locs)
               @@turn.unit_action!(player, u, loc, ua.id) if ua
             end
-            update!; sleep 0.1
+            publish_update!; sleep 0.1
           end
           sleep 0.3
 
@@ -146,7 +164,7 @@ class WorldTag < Live::View
     when 'reset'
       exit
     end
-    update!
+    publish_update!
   end
 end
 
