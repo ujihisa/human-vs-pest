@@ -1,9 +1,11 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  player_name: MyString
+  human_you_name: MyString
+  pest_you_name:
   finished_at: 2024-06-25 21:48:47
 
 two:
-  player_name: MyString
+  human_you_name: MyString
+  pest_you_name: MyString
   finished_at: 2024-06-25 21:48:47

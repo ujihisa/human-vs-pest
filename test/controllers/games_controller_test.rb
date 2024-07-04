@@ -11,13 +11,16 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should get new" do
+    put(you_url, params: { you_name: 'aaa' })
+    assert_response :found
+
     get new_game_url
     assert_response :success
   end
 
   test "should create game" do
     assert_difference("Game.count") do
-      post games_url, params: { game: { finished_at: @game.finished_at, player_name: @game.player_name } }
+      post games_url, params: { game: { human_you_name: @game.human_you_name } }
     end
 
     assert_redirected_to game_url(Game.last)
