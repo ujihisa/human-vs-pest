@@ -1,12 +1,12 @@
 <h1>ゲームを開始</h1>
 
-<%= form_with(model: @game) do |form| %>
-  <% if @game.errors.any? %>
+<%= form_with(model: @game_match) do |form| %>
+  <% if @game_match.errors.any? %>
     <div style="color: red">
-      <h2><%= pluralize(@game.errors.count, "error") %> prohibited this @game from being saved:</h2>
+      <h2><%= pluralize(@game_match.errors.count, "error") %> prohibited this @game_match from being saved:</h2>
 
       <ul>
-        <% @game.errors.each do |error| %>
+        <% @game_match.errors.each do |error| %>
           <li><%= error.full_message %></li>
         <% end %>
       </ul>
@@ -35,5 +35,5 @@
 <br>
 
 <div>
-  <%= link_to "Back to games", games_path %>
+  <%= link_to "Back to games", game_matches_path %>
 </div>

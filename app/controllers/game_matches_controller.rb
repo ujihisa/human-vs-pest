@@ -25,6 +25,16 @@ class WorldTag < Live::View
     end
   end
 
+  private def set_notify_turn_next!
+    @notify_turn_next = @@turn.num
+    Async do
+      sleep 1
+      if @notify_turn_next == @@turn.num
+        @notify_turn_next = nil
+      end
+    end
+  end
+
   # websocket only
   def bind(page)
     super # @page = page
@@ -66,7 +76,7 @@ class WorldTag < Live::View
             @@completed = { Human => false, Pest => false }
             @focus = nil
             @@turn = @@turn.next
-            @notify_turn_next = Time.now
+            set_notify_turn_next!
             publish_update!
           end
         end
@@ -75,7 +85,7 @@ class WorldTag < Live::View
   end
 
   def render(builder)
-    builder.append(ERB.new(File.read('app/views/games/_world.html.erb')).result_with_hash(
+    builder.append(ERB.new(File.read('app/views/game_matches/_world.html.erb')).result_with_hash(
       {
         your_player: @your_player,
         turn: @@turn,
@@ -87,10 +97,6 @@ class WorldTag < Live::View
         notify_turn_next: @notify_turn_next,
       },
     ))
-  ensure
-    if @notify_turn_next && 1 < Time.now - @notify_turn_next
-      @notify_turn_next = nil
-    end
   end
 
   def handle(event)
@@ -143,7 +149,7 @@ class WorldTag < Live::View
       if @@completed.all? { _2 }
         @@completed = { Human => false, Pest => false }
         @@turn = @@turn.next
-        @notify_turn_next = Time.now
+        set_notify_turn_next!
       end
     when 'autoplay_all'
       return if @@autoplaying
@@ -168,7 +174,7 @@ class WorldTag < Live::View
 
           break if @@turn.game.winner
           @@turn = @@turn.next
-          @notify_turn_next = Time.now
+          set_notify_turn_next!
         end
       end
     when 'reset'
@@ -178,27 +184,27 @@ class WorldTag < Live::View
   end
 end
 
-class GamesController < ApplicationController
-  before_action :set_game, only: %i[ show ]
+class GameMatchesController < ApplicationController
+  before_action :set_game_match, only: %i[ show ]
 
   # GET /games or /games.json
   def index
-    @games = Game.all
+    @games = GameMatch.all
   end
 
   # GET /games/1 or /games/1.json
   def show
     your_player_id =
       case session[:you]
-      when @game.human_you_name
+      when @game_match.human_you_name
         :human
-      when @game.pest_you_name
+      when @game_match.pest_you_name
         :pest
       end
     ai_player_id =
-      if @game.human_you_name.nil?
+      if @game_match.human_you_name.nil?
         :human
-      elsif @game.pest_you_name.nil?
+      elsif @game_match.pest_you_name.nil?
         :pest
       end
     @world_tag = WorldTag.new('world', your_player_id: your_player_id, ai_player_id: ai_player_id)
@@ -218,20 +224,20 @@ class GamesController < ApplicationController
     if session[:you].nil?
       redirect_to you_path
     end
-    @game = Game.new
+    @game_match = GameMatch.new
   end
 
   # POST /games or /games.json
   def create
-    @game = Game.new(
+    @game_match = GameMatch.new(
       human_you_name: game_params[:human_you_name].presence,
       pest_you_name: game_params[:pest_you_name].presence,
     )
 
     respond_to do |format|
-      if @game.save
-        # format.html { redirect_to game_url(@game), notice: "Game was successfully created." }
-        format.html { redirect_to game_url(@game) }
+      if @game_match.save
+        # format.html { redirect_to game_match_url(@game_match), notice: "GameMatch was successfully created." }
+        format.html { redirect_to game_match_url(@game_match) }
       else
         format.html { render :new, status: :unprocessable_entity }
       end
@@ -240,12 +246,12 @@ class GamesController < ApplicationController
 
   private
     # Use callbacks to share common setup or constraints between actions.
-    def set_game
-      @game = Game.find(params[:id])
+    def set_game_match
+      @game_match = GameMatch.find(params[:id])
     end
 
     # Only allow a list of trusted parameters through.
     def game_params
-      params.require(:game).permit(:human_you_name, :pest_you_name)
+      params.require(:game_match).permit(:human_you_name, :pest_you_name)
     end
 end

@@ -1,18 +1,18 @@
-<div id="<%= dom_id game %>">
+<div id="<%= dom_id game_match %>">
   <p>
     <strong>人間側のプレイヤの名前:</strong>
-    <%= game.human_you_name %>
+    <%= game_match.human_you_name %>
   </p>
 
   <p>
     <strong>害虫側のプレイヤの名前:</strong>
-    <%= game.pest_you_name %>
+    <%= game_match.pest_you_name %>
   </p>
 
-  <%- if game.finished_at %>
+  <%- if game_match.finished_at %>
     <p>
     <strong>Finished at:</strong>
-    <%= game.finished_at %>
+    <%= game_match.finished_at %>
     </p>
   <%- end %>
 

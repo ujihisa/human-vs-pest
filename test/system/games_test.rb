@@ -23,7 +23,7 @@ class GamesTest < ApplicationSystemTestCase
   end
 
   test "should update Game" do
-    visit game_url(@game)
+    visit game_match_url(@game)
     click_on "Edit this game", match: :first
 
     fill_in "Finished at", with: @game.finished_at
@@ -35,7 +35,7 @@ class GamesTest < ApplicationSystemTestCase
   end
 
   test "should destroy Game" do
-    visit game_url(@game)
+    visit game_match_url(@game)
     click_on "Destroy this game", match: :first
 
     assert_text "Game was successfully destroyed"

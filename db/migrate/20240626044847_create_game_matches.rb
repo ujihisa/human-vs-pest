@@ -1,6 +1,6 @@
-class CreateGames < ActiveRecord::Migration[7.1]
+class CreateGameMatches < ActiveRecord::Migration[7.1]
   def change
-    create_table :games do |t|
+    create_table :game_matches do |t|
       t.string :human_you_name
       t.string :pest_you_name
       t.datetime :finished_at

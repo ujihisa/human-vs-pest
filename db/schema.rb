@@ -11,7 +11,7 @@
 # It's strongly recommended that you check this file into your version control system.
 
 ActiveRecord::Schema[7.1].define(version: 2024_06_26_044847) do
-  create_table "games", force: :cascade do |t|
+  create_table "game_matches", force: :cascade do |t|
     t.string "human_you_name"
     t.string "pest_you_name"
     t.datetime "finished_at"
