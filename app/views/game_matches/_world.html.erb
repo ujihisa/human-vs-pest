@@ -7,12 +7,13 @@
   });
 </script>
 
+<% your_base = turn.game.world.buildings.of(your_player.id, :base) %>
 <% menu_actionable_locs = menu_action_focus ? turn.menu_actionable_actions(your_player).fetch(menu_action_focus.id, []) : [] %>
 <div class="row">
   <div class="col-md-4 order-md-1 col-12 order-4">
     <p>
     <% if your_player %>
-      あなたは<strong><%= your_player.japanese %></strong>としてプレイしてます
+      あなたは<strong><%= your_player.japanese %></strong>としてプレイしてます。
     <% else %>
       観戦モード
     <% end %>
@@ -53,7 +54,7 @@
               <%= u.hp %> / <%= u.max_hp(turn.game.world) %>
               </strong>
               (拠点からの移動距離:
-              <%= turn.game.world.move_distance(your_player.id, turn.game.world.buildings.of(your_player.id, :base).loc, u.loc) %>)
+              <%= turn.game.world.move_distance(your_player.id, your_base.loc, u.loc) %>)
             </li>
             <li class="list-group-item">
               1ターンそのユニットが何も行動しなければ、HPが <strong>3</strong> 回復します。
@@ -113,8 +114,9 @@
       <% end %>
 
     <% else %>
+      <p>このゲームの目的は、自分の拠点 <%= your_base.view %> を守りつつ、相手の拠点 <%= turn.game.world.buildings.of(your_player.opponent.id, :base).view %> を破壊することです。</p>
       <p>
-      未行動のユニットを選択するか、メニューから行動を選択してください。
+      マップ上の未行動のユニット <small>(アイコンに*マークがついています)</small> を選択するか、右のメニューから行動を選択してください。
       </p>
       <ul>
         <li>ユニットの行動は、各ユニットごとに1回のみです</li>
@@ -159,10 +161,16 @@
               <%= image_tag("backgrounds/selected.png", style: 'height: 64px; width: 64px;') %>
             <% end %>
           </div>
-          <div class="hex">
-            <nobr>
-              <%= hex %>
-            </nobr>
+          <div class="hex text-nowrap">
+            <%= hex %>
+          </div>
+          <% if turn.actionable_units.values.flatten(1).map(&:loc).include?(loc) %>
+            <div class="hex size64">
+              *
+            </div>
+          <% end %>
+          <div class="hex text-nowrap">
+            <%= hex %>
           </div>
           <% if building&.hp %>
             <div class="hex" style="top: 90%;">

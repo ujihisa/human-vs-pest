@@ -1,4 +1,6 @@
-<h1><%= @game_match.human_you_name || 'AI' %> vs <%= @game_match.pest_you_name || 'AI' %></h1>
+<h1>
+  Human vs Pest, <em><%= @game_match.human_you_name || 'AI' %> vs <%= @game_match.pest_you_name || 'AI' %></em>
+</h1>
 <p style="color: green"><%= notice %></p>
 
 <%= @world_tag.to_html %>
