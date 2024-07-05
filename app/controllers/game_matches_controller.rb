@@ -203,6 +203,8 @@ class GameMatchesController < ApplicationController
   def show
     your_player_id =
       case session[:you]
+      when nil
+        nil
       when @game_match.human_you_name
         :human
       when @game_match.pest_you_name
