@@ -10,15 +10,15 @@ class WorldTag < Live::View
   # both static and websocket
   def initialize(...)
     super(...)
-
-    GAME[@data[:game_match_id]] ||= {
+    game_match_id = @data[:game_match_id].to_i # to_i必須。WorldTag.new からはIntegerで、Live::Page.newからはStringで呼ばれる。
+    GAME[game_match_id] ||= {
       turn: Turn.new(num: 1, game: GameState.new(world: World.create(size_x: 5, size_y: 8))),
       completed: { Human => false, Pest => false },
       autoplaying: false,
       ai_started: false,
       subscribers: {},
     }
-    @g = GAME[@data[:game_match_id]] # just as an alias
+    @g = GAME[game_match_id] # just as an alias
 
     @your_player = @data[:your_player_id]&.then { Player.find(_1.to_sym) }
     @ai_player = @data[:ai_player_id]&.then { Player.find(_1.to_sym) }
