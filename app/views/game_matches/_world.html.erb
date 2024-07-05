@@ -9,7 +9,7 @@
 
 <% menu_actionable_locs = menu_action_focus ? turn.menu_actionable_actions(your_player).fetch(menu_action_focus.id, []) : [] %>
 <div class="row">
-  <div class="col-4 text-start">
+  <div class="col-md-4 order-md-1 col-12 order-4">
     <p>
     <% if your_player %>
       あなたは<strong><%= your_player.japanese %></strong>としてプレイしてます
@@ -125,7 +125,8 @@
       </p>
     <% end %>
   </div>
-  <div class="col-4">
+
+  <div class="col-md-4 col-8 order-2">
     <% if turn.game.winner %>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
         <%= turn.game.winner.japanese %>の勝ち
@@ -198,7 +199,7 @@
     <% end %>
   </div>
 
-  <div class="col-4 text-start">
+  <div class="col-4 order-3">
     <div class="container">
       ターン <%= turn.num %>
     </div>
@@ -272,4 +273,5 @@
       </ul>
     </div>
   </div>
+
 </div>

@@ -20,22 +20,19 @@
     </div>
   </body>
 
-  <nav class="navbar fixed-bottom navbar-expand-lg bg-body-tertiary">
+  <br/><br/><br/>
+
+  <nav class="navbar fixed-bottom bg-body-tertiary">
     <div class="container-fluid">
-      <a class="navbar-brand" href="#">Navbar</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item">
-            <%= link_to 'マッチ一覧', game_matches_path, class: 'btn btn-secondary' %>
+            <%= link_to 'マッチ一覧', game_matches_path, class: 'btn btn-secondary btn-sm' %>
           </li>
         </ul>
-        あなたの名前: <%= session[:you] || '未登録' %>
-        <%= link_to "名前設定画面を開く", '/you', class: 'btn btn-primary' %>
-      </div>
+        <span class="navbar-text">
+          あなたの名前: <strong><%= session[:you] || '未登録' %></strong>
+          <%= link_to("名前設定画面を開く", '/you', class: 'btn btn-primary') unless session[:you] %>
+        </span>
     </div>
   </nav>
 </html>
-
