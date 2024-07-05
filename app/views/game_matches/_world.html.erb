@@ -7,13 +7,13 @@
   });
 </script>
 
-<% your_base = turn.game.world.buildings.of(your_player.id, :base) %>
+<% your_base = turn.game.world.buildings.of(your_player.id, :base) if your_player %>
 <% menu_actionable_locs = menu_action_focus ? turn.menu_actionable_actions(your_player).fetch(menu_action_focus.id, []) : [] %>
 <div class="row">
   <div class="col-md-4 order-md-1 col-12 order-4">
     <p>
     <% if your_player %>
-      あなたは<strong><%= your_player.japanese %></strong>としてプレイしてます。
+      あなたは<strong><%= your_player.japanese %></strong>としてプレイしています。
     <% else %>
       観戦モード
     <% end %>
@@ -114,7 +114,8 @@
       <% end %>
 
     <% else %>
-      <p>このゲームの目的は、自分の拠点 <%= your_base.view %> を守りつつ、相手の拠点 <%= turn.game.world.buildings.of(your_player.opponent.id, :base).view %> を破壊することです。</p>
+      <% enemy_base = turn.game.world.buildings.of(your_player.opponent.id, :base) if your_player %>
+      <p>このゲームの目的は、自分の拠点 <%= your_base&.view %> を守りつつ、相手の拠点 <%= enemy_base&.view%> を破壊することです。</p>
       <p>
       マップ上の未行動のユニット <small>(アイコンに*マークがついています)</small> を選択するか、右のメニューから行動を選択してください。
       </p>

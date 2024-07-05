@@ -14,7 +14,7 @@ Building = Data.define(:player_id, :id, :loc, :hp, :_bd) do
     flowers:   BuildingDefault.new(:flowers,   '🌷', '🦠', true,  -> { nil }, '次ターンで収穫可能です'),
     seeds:     BuildingDefault.new(:seeds,     '🌱', '🧬', true,  -> { nil }, '...?'),
     seeds0:    BuildingDefault.new(:seeds0,    '🌱', '🧬', true,  -> { nil }, '...?'),
-    trail:     BuildingDefault.new(:trail,     '🛤', '🛤', true,  -> { nil }, '自陣営のみ、1ターンで移動できる距離が増えます'),
+    trail:     BuildingDefault.new(:trail,     '🛤', '🛤', true,  -> { nil }, '自陣営のみ、1ターンで移動できる距離が増えます (最大3)'),
     bomb0:     BuildingDefault.new(:bomb0,     '💣', '💣', true,  -> { 1 }, '次ターンから、任意のタイミングで起爆できます'),
     bomb:      BuildingDefault.new(:bomb,     '💣', '💣', true,  -> { 1 }, '起爆すると、敵味方関係なく周囲1マス範囲を全て破壊しつくします'),
   }

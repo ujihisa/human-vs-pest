@@ -70,7 +70,7 @@ class TestUnit < Minitest::Test
     @unit.loc = Location.new(1, 1)
 
     expected_locations =
-      [[1, 0], [0, 1], [2, 1], [0, 2], [1, 2], [2, 2], [0, 2], [2, 2], [0, 3], [1, 3], [2, 3], [2, 2], [3, 2], [1, 3], [3, 3], [2, 4]].
+      [[1, 0], [0, 1], [2, 1], [0, 2], [1, 2], [2, 2], [0, 3], [1, 3], [2, 3], [3, 2], [3, 3], [2, 4]].
       map { Location.new(_1, _2) }
     assert_equal expected_locations, @unit.moveable(world: @world)
   end
