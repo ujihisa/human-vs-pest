@@ -3,16 +3,22 @@
 require 'async/queue'
 require 'async/websocket/adapters/rails'
 
-class WorldTag < Live::View
-  @@turn = Turn.new(num: 1, game: GameState.new(world: World.create(size_x: 5, size_y: 8)))
-  @@completed = { Human => false, Pest => false }
-  @@autoplaying = false
-  @@ai_stared = false
-  @@subscribers = {}
+# TODO: シリアライズするなどで、DBに保存する?
+GAME = {}
 
+class WorldTag < Live::View
   # both static and websocket
   def initialize(...)
     super(...)
+
+    GAME[@data[:game_match_id]] ||= {
+      turn: Turn.new(num: 1, game: GameState.new(world: World.create(size_x: 5, size_y: 8))),
+      completed: { Human => false, Pest => false },
+      autoplaying: false,
+      ai_started: false,
+      subscribers: {},
+    }
+    @g = GAME[@data[:game_match_id]] # just as an alias
 
     @your_player = @data[:your_player_id]&.then { Player.find(_1.to_sym) }
     @ai_player = @data[:ai_player_id]&.then { Player.find(_1.to_sym) }
@@ -20,16 +26,16 @@ class WorldTag < Live::View
   end
 
   private def publish_update!
-    @@subscribers.each_value do |q|
+    @g[:subscribers].each_value do |q|
       q << :update!
     end
   end
 
   private def set_notify_turn_next!
-    @notify_turn_next = @@turn.num
+    @notify_turn_next = @g[:turn].num
     Async do
       sleep 1
-      if @notify_turn_next == @@turn.num
+      if @notify_turn_next == @g[:turn].num
         @notify_turn_next = nil
       end
     end
@@ -39,10 +45,10 @@ class WorldTag < Live::View
   def bind(page)
     super # @page = page
 
-    @@subscribers[self] = Async::Queue.new
+    @g[:subscribers][self] = Async::Queue.new
 
     Async do
-      while mes = @@subscribers[self].dequeue
+      while mes = @g[:subscribers][self].dequeue
         break unless @page
         case mes
         when :update!
@@ -51,31 +57,31 @@ class WorldTag < Live::View
           raise "Unknown message: #{mes}"
         end
       end
-      @@subscribers.delete(self)
+      @g[:subscribers].delete(self)
     end
 
     # AI側を強制実行
-    if @ai_player && !@@ai_stared
-      @@ai_stared = true
+    if @ai_player && !@g[:ai_started]
+      @g[:ai_started] = true
       Async do
-        until @@turn.game.winner do
-          while ((action, loc) = AI.find_menu_action(@@turn, @ai_player, @@turn.menu_actionable_actions(@ai_player)))
-            @@turn.menu_action!(@ai_player, action, loc)
+        until @g[:turn].game.winner do
+          while ((action, loc) = AI.find_menu_action(@g[:turn], @ai_player, @g[:turn].menu_actionable_actions(@ai_player)))
+            @g[:turn].menu_action!(@ai_player, action, loc)
           end
           publish_update!; sleep 1
 
-          @@turn.actionable_units[@ai_player.id].each do |u|
-            locs = @@turn.unit_actionable_locs(@ai_player, u)
-            (loc, ua) = AI.unit_action_for(@@turn.game, @ai_player, u, locs)
-            @@turn.unit_action!(@ai_player, u, loc, ua.id) if ua
+          @g[:turn].actionable_units[@ai_player.id].each do |u|
+            locs = @g[:turn].unit_actionable_locs(@ai_player, u)
+            (loc, ua) = AI.unit_action_for(@g[:turn].game, @ai_player, u, locs)
+            @g[:turn].unit_action!(@ai_player, u, loc, ua.id) if ua
           end
-          @@completed[@ai_player] = true
+          @g[:completed][@ai_player] = true
           publish_update!; sleep 1
 
-          if @@completed.all? { _2 }
-            @@completed = { Human => false, Pest => false }
+          if @g[:completed].all? { _2 }
+            @g[:completed] = { Human => false, Pest => false }
             @focus = nil
-            @@turn = @@turn.next
+            @g[:turn] = @g[:turn].next
             set_notify_turn_next!
             publish_update!
           end
@@ -88,11 +94,11 @@ class WorldTag < Live::View
     builder.append(ERB.new(File.read('app/views/game_matches/_world.html.erb')).result_with_hash(
       {
         your_player: @your_player,
-        turn: @@turn,
+        turn: @g[:turn],
         help_focus_loc: @help_focus_loc,
         focus: @focus,
-        completed: @@completed,
-        hexes_view: @@turn.game.world.hexes_view(exclude_background: true),
+        completed: @g[:completed],
+        hexes_view: @g[:turn].game.world.hexes_view(exclude_background: true),
         menu_action_focus: @menu_action_focus,
         notify_turn_next: @notify_turn_next,
       },
@@ -107,20 +113,20 @@ class WorldTag < Live::View
       @help_focus_loc = (@help_focus_loc == loc) ? nil : loc
 
       if @focus
-        if @@turn.unit_actionable_locs(@your_player, @focus).include?(loc)
-          action = UnitAction.reason(@@turn.game, @focus, loc)
-          @@turn.unit_action!(@your_player, @focus, loc, action.id)
+        if @g[:turn].unit_actionable_locs(@your_player, @focus).include?(loc)
+          action = UnitAction.reason(@g[:turn].game, @focus, loc)
+          @g[:turn].unit_action!(@your_player, @focus, loc, action.id)
         end
         @focus = nil
       else
         if @menu_action_focus
-          locs = @@turn.menu_actionable_actions(@your_player)[@menu_action_focus.id]
+          locs = @g[:turn].menu_actionable_actions(@your_player)[@menu_action_focus.id]
           if locs && locs.include?(loc)
-            @@turn.menu_action!(@your_player, @menu_action_focus.id, loc)
+            @g[:turn].menu_action!(@your_player, @menu_action_focus.id, loc)
           end
           @menu_action_focus = nil
         else
-          if human = @@turn.actionable_units[@your_player.id].find { _1.loc == loc }
+          if human = @g[:turn].actionable_units[@your_player.id].find { _1.loc == loc }
             @focus = human
           end
         end
@@ -128,7 +134,7 @@ class WorldTag < Live::View
     when 'menu'
       @focus = nil
 
-      menu_action_focus = MenuActions.at(@@turn.game, @your_player)[event[:menu].to_sym]
+      menu_action_focus = MenuActions.at(@g[:turn].game, @your_player)[event[:menu].to_sym]
       case menu_action_focus
       when nil
         # do nothing
@@ -141,39 +147,39 @@ class WorldTag < Live::View
       @focus = nil
       @menu_action_focus = nil
     when 'complete'
-      @@completed[@your_player] = true
+      @g[:completed][@your_player] = true
       @focus = nil
       @menu_action_focus = nil
       publish_update!
 
-      if @@completed.all? { _2 }
-        @@completed = { Human => false, Pest => false }
-        @@turn = @@turn.next
+      if @g[:completed].all? { _2 }
+        @g[:completed] = { Human => false, Pest => false }
+        @g[:turn] = @g[:turn].next
         set_notify_turn_next!
       end
     when 'autoplay_all'
-      return if @@autoplaying
-      @@autoplaying = true
+      return if @g[:autoplaying]
+      @g[:autoplaying] = true
       Async do
         players = [Human, Pest]
         loop do
           players.each do |player|
-            while ((action, loc) = AI.find_menu_action(@@turn, player, @@turn.menu_actionable_actions(player)))
-              @@turn.menu_action!(player, action, loc)
+            while ((action, loc) = AI.find_menu_action(@g[:turn], player, @g[:turn].menu_actionable_actions(player)))
+              @g[:turn].menu_action!(player, action, loc)
             end
             publish_update!; sleep 0.1
 
-            @@turn.actionable_units[player.id].each do |u|
-              locs = @@turn.unit_actionable_locs(player, u)
-              (loc, ua) = AI.unit_action_for(@@turn.game, player, u, locs)
-              @@turn.unit_action!(player, u, loc, ua.id) if ua
+            @g[:turn].actionable_units[player.id].each do |u|
+              locs = @g[:turn].unit_actionable_locs(player, u)
+              (loc, ua) = AI.unit_action_for(@g[:turn].game, player, u, locs)
+              @g[:turn].unit_action!(player, u, loc, ua.id) if ua
             end
             publish_update!; sleep 0.1
           end
           sleep 0.3
 
-          break if @@turn.game.winner
-          @@turn = @@turn.next
+          break if @g[:turn].game.winner
+          @g[:turn] = @g[:turn].next
           set_notify_turn_next!
         end
       end
@@ -189,7 +195,8 @@ class GameMatchesController < ApplicationController
 
   # GET /games or /games.json
   def index
-    @games = GameMatch.all
+    @game_matches = GameMatch.where(finished_at: nil).order(id: :desc).all
+    @finished_game_matches = GameMatch.where.not(finished_at: nil).order(id: :desc).all
   end
 
   # GET /games/1 or /games/1.json
@@ -207,7 +214,7 @@ class GameMatchesController < ApplicationController
       elsif @game_match.pest_you_name.nil?
         :pest
       end
-    @world_tag = WorldTag.new('world', your_player_id: your_player_id, ai_player_id: ai_player_id)
+    @world_tag = WorldTag.new('world', game_match_id: @game_match.id, your_player_id: your_player_id, ai_player_id: ai_player_id)
   end
 
   skip_before_action :verify_authenticity_token, only: :live

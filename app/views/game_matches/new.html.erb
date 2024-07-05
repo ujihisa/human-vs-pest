@@ -1,4 +1,4 @@
-<h1>ゲームを開始</h1>
+<h1>新しいマッチを作成</h1>
 
 <%= form_with(model: @game_match) do |form| %>
   <% if @game_match.errors.any? %>
@@ -14,7 +14,7 @@
   <% end %>
 
   <div class="alert alert-primary" role="alert">
-    名前として空欄を設定すると、AIが担当します。
+    あなたがプレイしない側の名前を空欄に設定することで、そちらをAIに担当させることができます。
   </div>
 
   <div>
@@ -28,12 +28,12 @@
   </div>
 
   <div>
-    <%= form.submit %>
+    <%= form.submit '作成', class: 'btn btn-primary' %>
   </div>
 <% end %>
 
 <br>
 
 <div>
-  <%= link_to "Back to games", game_matches_path %>
+  <%= link_to "マッチ一覧に戻る", game_matches_path %>
 </div>

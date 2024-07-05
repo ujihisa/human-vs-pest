@@ -1,14 +1,45 @@
 <p style="color: green"><%= notice %></p>
 
-<h1>Games</h1>
+<h1>マッチ一覧</h1>
 
-<div id="games">
-  <% @games.each do |game| %>
-    <%= render game %>
-    <p>
-      <%= link_to "Show this game", game %>
-    </p>
-  <% end %>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">人間側のプレイヤの名前</th>
+      <th scope="col">害虫側のプレイヤの名前</th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @game_matches.each do |game| %>
+      <%= render game %>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @game_matches.empty? %>
+  <p>入室可能な既存のマッチはありません... 今すぐ新しいマッチを作成しましょう！</p>
+<% end %>
+
+<div class="text-center">
+  <%= link_to '新しいマッチを作成', new_game_match_path, class: 'btn btn-primary' %>
 </div>
 
-<%= link_to "New game", new_game_match_path %>
+<h2>過去のマッチ一覧</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">人間側のプレイヤの名前</th>
+      <th scope="col">害虫側のプレイヤの名前</th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @finished_game_matches.each do |game| %>
+      <%= render game %>
+    <% end %>
+  </tbody>
+</table>
+</div>
