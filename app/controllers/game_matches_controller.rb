@@ -78,6 +78,7 @@ class WorldTag < Live::View
           @g[:completed][@ai_player] = true
           publish_update!; sleep 1
 
+          # TODO: pubsubかbarrierでawait
           if @g[:completed].all? { _2 }
             @g[:completed] = { Human => false, Pest => false }
             @focus = nil
@@ -117,14 +118,14 @@ class WorldTag < Live::View
           action = UnitAction.reason(@g[:turn].game, @focus, loc)
           @g[:turn].unit_action!(@your_player, @focus, loc, action.id)
         end
-        @focus = nil
+        @focus = @help_focus_loc = nil
       else
         if @menu_action_focus
           locs = @g[:turn].menu_actionable_actions(@your_player)[@menu_action_focus.id]
           if locs && locs.include?(loc)
             @g[:turn].menu_action!(@your_player, @menu_action_focus.id, loc)
           end
-          @menu_action_focus = nil
+          @menu_action_focus = @help_focus_loc = nil
         else
           if human = @g[:turn].actionable_units[@your_player.id].find { _1.loc == loc }
             @focus = human
@@ -149,8 +150,7 @@ class WorldTag < Live::View
       @menu_action_focus = nil
     when 'complete'
       @g[:completed][@your_player] = true
-      @focus = nil
-      @menu_action_focus = nil
+      @focus = @help_focus_loc = nil
       publish_update!
 
       if @g[:completed].all? { _2 }
@@ -192,6 +192,8 @@ class WorldTag < Live::View
       human_units.each do |u|
         u.hp = u.max_hp(@g[:turn].game.world)
       end
+      # humanのresourcesのwoodを+10
+      @g[:turn].game.resources[:human].then { _1[:wood] = _1[:wood].add_amount(10) }
     end
     publish_update!
   end

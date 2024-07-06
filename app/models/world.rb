@@ -68,54 +68,74 @@ class World
   # * trailのときはさらに次までいけるが、1ターンで最大でも3マスまで
   # * treeなどはHP分だけターン数を消費
   def move_distance(player_id, loc0, loc1)
-    # TODO: 現在幅優先探索しているが、Unit._explore_trail を用いてダイクストラ法に変更する
     return 0 if loc0 == loc1
     player = Player.find(player_id)
 
-    q = [[loc0, 0, 0]]  # [current location, current distance, current trail depth]
-    visited = { loc0 => 0 }
+    q = PriorityQueue.new
+    q.push([0, 0, loc0])  # [f, depth, loc]
+    g_score = { loc0 => 0 } # スタートからの最小コストの推定、ようするにここまでに必要なターン数
+    f_score = { loc0 => heuristic(loc0, loc1, 0) } # g + ゴールからの最小コストの推定h
+
     until q.empty?
-      (current, dist, depth) = q.shift
+      (_, depth, current) = q.pop
+
+      return g_score[current] if current == loc1
 
       neighbours(current).each do |nloc|
-        next if visited[nloc]
+        new_g_score = g_score[current]
         building = buildings.at(nloc)
         next if not_passable?(player, nloc) && building.hp.nil?
 
-        new_dist = dist
         if building&.player == player && building&.id == :trail
-          new_depth =
-            case depth
-            when 0
-              # これから移動しはじめる
-              new_dist += 1
-              depth + 1
-            when 1..2
-              depth + 1
-            when 3
-              # 3マスごとに初期化
-              0
-            else
-              raise "Must not happen: depth: #{depth}"
-            end
+          case depth
+          when 0
+            # これから移動しはじめる
+            new_g_score += 1
+            new_depth = depth + 1
+          when 1
+            new_depth = depth + 1
+          when 2
+            # 3マスごとに初期化
+            new_depth = 0
+          else
+            raise "Must not happen: depth: #{depth}"
+          end
         else
+          if depth == 0
+            # 普通のケース
+            new_g_score += 1
+          else
+            # trailから出たときのこと。trailに入った時点でターンを支払っているので、ここでは無料
+          end
           new_depth = 0 # trailじゃないから初期化
-          new_dist += 1
         end
-
-        visited[nloc] = new_dist
 
         # 追加の移動ターンを計算するため、not_passable?でhpがある場合はそのHP分だけ追加のターンを使う
         if not_passable?(player, nloc) && building&.hp
-          visited[nloc] += building.hp
+          new_g_score += building.hp
         end
 
-        return new_dist if nloc == loc1
-        q << [nloc, new_dist, new_depth]
+        if !g_score.key?(nloc) || new_g_score < g_score[nloc]
+          # 明らかに改善するケース
+          g_score[nloc] = new_g_score
+          f_score[nloc] = new_g_score + heuristic(nloc, loc1, new_depth)
+          q.push([f_score[nloc], new_depth, nloc])
+        elsif new_g_score == g_score[nloc]
+          new_f_score = new_g_score + heuristic(nloc, loc1, new_depth)
+          if new_f_score < f_score[nloc]
+            # ターン数は同じだけどdepthが小さそうなケース
+            q.push([f_score[nloc], new_depth, nloc])
+          end
+        end
       end
     end
 
     raise "Must not happen: unreachable"
+  end
+
+  private def heuristic(loc0, loc1, depth)
+    bonus = depth == 0 ? 0 : (1 - depth/3r)
+    Math.sqrt((loc1.x - loc0.x) ** 2 + (loc1.y - loc0.y) ** 2) - bonus
   end
 
   def neighbours(loc)
@@ -219,5 +239,50 @@ class World
     end
     puts('=' * (@size_x * 6 + 1))
   end
-end
 
+  class PriorityQueue
+    def initialize
+      @es = [nil]
+    end
+
+    def push(element)
+      @es << element
+      bubble_up(@es.size - 1)
+    end
+
+    def pop
+      exchange(1, @es.size - 1)
+      max = @es.pop
+      bubble_down(1)
+      max
+    end
+
+    def empty?
+      @es.size == 1
+    end
+
+    private def bubble_up(index)
+      parent_index = index / 2
+      return if index <= 1
+      return if @es[parent_index].first <= @es[index].first
+      exchange(index, parent_index)
+      bubble_up(parent_index)
+    end
+
+    private def bubble_down(index)
+      child_index = index * 2
+      return if child_index > @es.size - 1
+      not_the_last_element = child_index < @es.size - 1
+      (left, right) = [@es[child_index], @es[child_index + 1]]
+      child_index += 1 if not_the_last_element && right.first < left.first
+      return if @es[index].first <= @es[child_index].first
+      exchange(index, child_index)
+      bubble_down(child_index)
+    end
+
+    private def exchange(source, target)
+      (@es[source], @es[target]) = [@es[target], @es[source]]
+    end
+  end
+  private_constant :PriorityQueue
+end
