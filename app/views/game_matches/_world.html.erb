@@ -217,7 +217,8 @@
         <ul class="list-group">
           <li class="list-group-item">
             資源:
-            <%= turn.game.resources[your_player.id].values.map { _1.view }.join('') %>
+            <% resources = turn.game.resources[your_player.id].values %>
+            <%= resources.sum(&:amount) == 0 ? 'なし' : resources.map { _1.view }.join('') %>
           </li>
           <% menu_actionable_actions = turn.menu_actionable_actions(your_player) %>
           <li class="list-group-item">

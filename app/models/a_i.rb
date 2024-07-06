@@ -17,7 +17,6 @@ module AI
             blockers = turn.game.world.neighbours(loc).select {|nloc|
               turn.game.world.not_passable?(player.opponent, nloc)
             }
-            pp blockers
             if blockers.any? {|l| l.x < loc.x } && blockers.any? {|l| l.x > loc.x }
               rand(10) < 9 # 90%
             end
@@ -40,19 +39,28 @@ module AI
   end
 
   # [Location, UnitAction] | nil
-  def self.unit_action_for(game, player, u, locs)
+  def self.unit_action_for(game, player, unit, locs)
     return nil if game.winner
 
-    uas = locs.map {|loc| [loc, UnitAction.reason(game, u, loc)] }
+    uas = locs.map {|loc| [loc, UnitAction.reason(game, unit, loc)] }
 
     # セルフケア最優先
-    if u.hp <= u.max_hp(game.world) / 2
+    if unit.hp <= unit.max_hp(game.world) / 2
       return nil
     end
 
     # 次いで近接攻撃
     if ua = uas.find { _1[1].id == :melee_attack }
-      return ua
+      # 相手のHPの方が高いときは、5%の確率で攻撃する
+      # ここでいう相手とは、loc = ua[0]の位置にいるunitのこと
+      if game.world.unitss[player.opponent.id].any? {|u| u.loc == ua[0] && unit.hp < u.hp }
+        if rand(100) < 5
+          return ua
+        end
+      else
+        # そうでないなら必ず攻撃する
+        return ua
+      end
     end
 
     # 相手が自拠点に近づいてきていれば戻る
