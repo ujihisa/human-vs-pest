@@ -65,38 +65,53 @@ class World
   end
 
   # loc0からloc1にunitがmoveするのに必要なターン数
-  # * trailはターン数を消費しない
-  # * treeはHP分だけターン数を消費する
+  # * trailのときはさらに次までいけるが、1ターンで最大でも3マスまで
+  # * treeなどはHP分だけターン数を消費
   def move_distance(player_id, loc0, loc1)
+    # TODO: 現在幅優先探索しているが、Unit._explore_trail を用いてダイクストラ法に変更する
     return 0 if loc0 == loc1
     player = Player.find(player_id)
 
-    q = [loc0]
+    q = [[loc0, 0, 0]]  # [current location, current distance, current trail depth]
     visited = { loc0 => 0 }
     until q.empty?
-      loc = q.shift
-      dist = visited[loc]
+      (current, dist, depth) = q.shift
 
-      neighbours(loc).each do |nloc|
+      neighbours(current).each do |nloc|
         next if visited[nloc]
         building = buildings.at(nloc)
-
         next if not_passable?(player, nloc) && building.hp.nil?
 
-        visited[nloc] =
-          if building&.player == player && building&.id == :trail
-            dist
-          else
-            dist + 1
-          end
+        new_dist = dist
+        if building&.player == player && building&.id == :trail
+          new_depth =
+            case depth
+            when 0
+              # これから移動しはじめる
+              new_dist += 1
+              depth + 1
+            when 1..2
+              depth + 1
+            when 3
+              # 3マスごとに初期化
+              0
+            else
+              raise "Must not happen: depth: #{depth}"
+            end
+        else
+          new_depth = 0 # trailじゃないから初期化
+          new_dist += 1
+        end
+
+        visited[nloc] = new_dist
 
         # 追加の移動ターンを計算するため、not_passable?でhpがある場合はそのHP分だけ追加のターンを使う
         if not_passable?(player, nloc) && building&.hp
           visited[nloc] += building.hp
         end
 
-        return visited[nloc] if nloc == loc1
-        q << nloc
+        return new_dist if nloc == loc1
+        q << [nloc, new_dist, new_depth]
       end
     end
 

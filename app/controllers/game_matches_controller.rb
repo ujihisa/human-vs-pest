@@ -144,6 +144,7 @@ class WorldTag < Live::View
         @menu_action_focus = menu_action_focus
       end
     when 'rightclick'
+      @help_focus_loc = nil
       @focus = nil
       @menu_action_focus = nil
     when 'complete'
@@ -185,6 +186,12 @@ class WorldTag < Live::View
       end
     when 'reset'
       exit
+    when 'debug_unit_actionable_again'
+      human_units = @g[:turn].game.world.unitss[:human]
+      @g[:turn].actionable_units[:human] = human_units
+      human_units.each do |u|
+        u.hp = u.max_hp(@g[:turn].game.world)
+      end
     end
     publish_update!
   end

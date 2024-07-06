@@ -21,3 +21,6 @@ https://human-vs-pest-t7ero6olsa-uc.a.run.app/
             * ユニット < player
                 * human / pestのみ
 
+trailの厳密な定義
+* 移動先がtrailだと、そのneighboursにも移動できる
+* ^ これは1ターンに2回だけ適用される。よって最大距離は3
