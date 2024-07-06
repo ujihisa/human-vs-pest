@@ -10,6 +10,12 @@ class Turn
   end
   attr_reader :num, :game, :actionable_units, :messages
 
+  private def postprocess_death(unit)
+    @messages << "#{unit.player.japanese}: ユニット#{unit.loc.inspect}が死亡しました"
+    @game.world.unitss[unit.player_id].delete(unit)
+    @actionable_units[unit.player_id].delete(unit)
+  end
+
   def unit_actionable_locs(player, unit)
     return [] if @game.winner
     return [] if !@actionable_units[player.id].include?(unit)
@@ -99,8 +105,8 @@ class Turn
           @messages << "#{player.japanese}: #{b.player.japanese} の #{b.view}を破壊しました"
         end
         if u = @game.world.unitss.values.flatten(1).find { _1.loc == nloc }
-          @messages << "#{player.japanese}: #{u.player.japanese} の ユニットが死亡しました"
-          @game.world.unitss[u.player.id].delete(u)
+          u.hp = 0
+          postprocess_death(u)
         end
       end
     when :spawn_unit
@@ -187,14 +193,8 @@ class Turn
         target_unit.hp -= damage
       end
 
-      if unit.dead?
-        @messages << "#{player.japanese}: #{unit.loc.inspect}にいるユニットが死亡しました"
-        @game.world.unitss[player.id].delete(unit)
-      end
-      if target_unit.dead?
-        @messages << "#{player.opponent.japanese}: #{target_unit.loc.inspect}にいるユニットが死亡しました"
-        @game.world.unitss[player.opponent.id].delete(target_unit)
-      end
+      postprocess_death(unit) if unit.dead?
+      postprocess_death(target_unit) if target_unit.dead?
     end
 
     @actionable_units[player.id] -= [unit]
