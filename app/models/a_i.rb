@@ -51,7 +51,7 @@ module AI
 
     # 相手よりHP合計が多ければrage mode
     if game.world.unitss[player.opponent.id].sum(&:hp) < game.world.unitss[player.id].sum(&:hp)
-      ua = uas.select {|_, a| [:move, :harvest_woods, :mine_ore].include?(a.id) }.min_by {|loc, _|
+      ua = uas.select {|_, a| [:move, :harvest_woods, :mine_ore, :attack_barricade].include?(a.id) }.min_by {|loc, _|
         game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent.id, :base).loc)
       }
       ua

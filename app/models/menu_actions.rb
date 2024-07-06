@@ -6,7 +6,7 @@ MenuActions = {
   #                :japanese           :cost          :location_type, :description
   build_farm:      ['建設/農地',       { seed: 1 },   :unit,          '種を植えます。3ターン後に身が実ります'],
   build_trail:     ['建設/小道',       { wood: 1 },   :unit,          '小道を設置します。これがあると、1ターンで移動できる距離が増えます。ユニットの最大HPを高く保つのに活躍します'],
-  build_barricade: ['建設/バリケード', { wood: 2 },   :unit,          '未実装!'],
+  build_barricade: ['建設/バリケード', { wood: 2 },   :unit,          '自分は通過できるけど、相手は通過できないバリケードを設置します。無人のときに3回攻撃されると壊れます'],
   place_bomb:      ['設置/爆弾',       { ore: 3 },    :unit,          '爆弾を設置します。次ターンから、任意のタイミングで起爆できます'],
   spawn_unit:      ['ユニット生産',    { money: :f }, :base_without_unit, 'ユニットを生産します。作られたユニットは即座に行動できます。コストは毎回高くなっていくので注意'],
   trigger_bomb:    ['爆弾起爆',        {},            :bomb,          '爆弾を起爆します。起爆すると、敵味方関係なく周囲1マス範囲を全て破壊しつくします'],

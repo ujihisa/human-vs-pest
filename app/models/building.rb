@@ -7,7 +7,7 @@ Building = Data.define(:player_id, :id, :loc, :hp, :_bd) do
   BUILDING_DEFAULTS = {
     tree:      BuildingDefault.new(:tree,      '🌲', '🌲', false, -> { rand(1..3) }, 'HPの数だけ伐採できます。伐採すると木材が得られます'),
     rock:      BuildingDefault.new(:rock,      '🪨', '🪨', false, -> { rand(5..9) }, 'HPの数だけ採掘できます。採掘すると鉱石が得られます'),
-    barricade: BuildingDefault.new(:barricade, '🚧', '🕸', false, -> { 8 }, '相手陣営だけ通行不能です。HPの数だけ攻撃を耐えます。'),
+    barricade: BuildingDefault.new(:barricade, '🚧', '🕸', false, -> { 3 }, '相手陣営だけ通行不能です。HPの数だけ攻撃を耐えます。'),
     pond:      BuildingDefault.new(:pond,      '🌊', '🌊', false, -> { nil }, '通行不能です'),
     base:      BuildingDefault.new(:base,      '🏠', '🕳', true,  -> { nil }, 'これを失った陣営がゲームオーバーです'),
     fruits:    BuildingDefault.new(:fruits,    '🍓', '🍄', true,  -> { nil }, '自陣営のものならば、ユニットがそこに立つだけで自動で収穫してくれます。収穫すると、種とお金が得られます。また育つと再収穫できます。'),

@@ -68,51 +68,49 @@
         </div>
       <% end %>
 
-      <% if menu_action_focus %>
-        <div class="container">
-          <h5>メニュー</h5>
-          <ul class="list-group">
-            <li class="list-group-item">
-              <p>
-                <%= menu_action_focus.japanese %>
-              </p>
-              <p>
-                <%= menu_action_focus.description %>
-              </p>
-            </li>
-            <li class="list-group-item">
-              消費する資源:
-              <% menu_action_focus.cost.each do |k, amount| %>
-                <%= PlayerResource.new(resource_id: k, amount: amount).view %>
-              <% end %>
-            </li>
-            <li class="list-group-item">
-              対象:
-              <% case menu_action_focus.location_type
-                 when :unit %>
-                自陣のいずれかのユニットの位置
-              <% when :base %>
-                自拠点 (ただしユニットがその位置にいない場合に限る)
-              <% when :bomb %>
-                設置積みの爆弾
-              <% else %>
-                (TODO: 説明文が未実装です)
-              <% end %>
-            </li>
-            <li class="list-group-item">
-              <small>
-              <p>
-              右のメニューにある行動リストは、あなたの所有している資源を消費するかわりに、ユニットの行動に関わらず任意のタイミングで発動できます。
-              </p>
-              <p>
-              対象となる位置を指定してください。
-              </p>
-              </small>
-            </li>
-          </ul>
-        </div>
-      <% end %>
-
+    <% elsif menu_action_focus %>
+      <div class="container">
+        <h5>メニュー</h5>
+        <ul class="list-group">
+          <li class="list-group-item">
+            <p>
+              <%= menu_action_focus.japanese %>
+            </p>
+            <p>
+              <%= menu_action_focus.description %>
+            </p>
+          </li>
+          <li class="list-group-item">
+            消費する資源:
+            <% menu_action_focus.cost.each do |k, amount| %>
+              <%= PlayerResource.new(resource_id: k, amount: amount).view %>
+            <% end %>
+          </li>
+          <li class="list-group-item">
+            対象:
+            <% case menu_action_focus.location_type
+               when :unit %>
+              自陣のいずれかのユニットの位置
+            <% when :base %>
+              自拠点 (ただしユニットがその位置にいない場合に限る)
+            <% when :bomb %>
+              設置積みの爆弾
+            <% else %>
+              (TODO: 説明文が未実装です)
+            <% end %>
+          </li>
+          <li class="list-group-item">
+            <small>
+            <p>
+            右のメニューにある行動リストは、あなたの所有している資源を消費するかわりに、ユニットの行動に関わらず任意のタイミングで発動できます。
+            </p>
+            <p>
+            対象となる位置を指定してください。
+            </p>
+            </small>
+          </li>
+        </ul>
+      </div>
     <% else %>
       <% enemy_base = turn.game.world.buildings.of(your_player.opponent.id, :base) if your_player %>
       <p>このゲームの目的は、自分の拠点 <%= your_base&.view %> を守りつつ、相手の拠点 <%= enemy_base&.view%> を破壊することです。</p>

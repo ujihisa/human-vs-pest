@@ -73,6 +73,15 @@ class Turn
       end
 
       @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :trail, loc: loc)
+    when :build_barricade
+      if b = @game.world.buildings.at(loc)
+        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、バリケードにしました"
+        @game.world.buildings.delete_at(loc)
+      else
+        @messages << "#{player.japanese}: #{loc.inspect}をバリケードにしました"
+      end
+
+      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :barricade, loc: loc)
     when :place_bomb
       if b = @game.world.buildings.at(loc)
         @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、爆弾を設置しました"
@@ -151,6 +160,13 @@ class Turn
       end
     when :mine_ore
       @game.resources[player.id][:ore] = @game.resources[player.id][:ore].add_amount(1)
+      building = @game.world.buildings.at(loc)
+
+      @game.world.buildings.delete_at(loc)
+      if 1 < building.hp
+        @game.world.buildings[player.id] << building.with(hp: building.hp - 1)
+      end
+    when :attack_barricade
       building = @game.world.buildings.at(loc)
 
       @game.world.buildings.delete_at(loc)
