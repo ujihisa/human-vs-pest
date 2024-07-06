@@ -34,7 +34,7 @@ UnitAction = Data.define(:id, :japanese) do
     end
 
     b = game.world.buildings.at(loc)
-    if b
+    if b && b.player != unit.player
       case b.id
       when :tree
         return UnitAction.find(:harvest_woods)
