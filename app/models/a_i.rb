@@ -2,11 +2,26 @@
 
 module AI
   def self.find_menu_action(turn, player, menu_actions)
-    menu_actions.each do |action, locs|
+    menu_actions.to_a.shuffle.each do |action, locs|
       locs = locs.select {|loc|
+        # すでに建物がある場所には建設しない
+        if turn.game.world.buildings.at(loc) && /build|place/ =~ action.to_s
+          next false
+        end
+
         case action
-        when :barricade
-          false
+        when :build_barricade
+          # y軸マップ中央あたりで、左右両側に少なくとも1つ敵が移動不可能建物があるとき
+          centre = turn.game.world.size_y / 2
+          if ((centre - 2)..(centre + 2)).include?(loc.y)
+            blockers = turn.game.world.neighbours(loc).select {|nloc|
+              turn.game.world.not_passable?(player.opponent, nloc)
+            }
+            pp blockers
+            if blockers.any? {|l| l.x < loc.x } && blockers.any? {|l| l.x > loc.x }
+              rand(10) < 9 # 90%
+            end
+          end
         when :place_bomb, :trigger_bomb
           neighbours = turn.game.world.neighbours(loc)
 

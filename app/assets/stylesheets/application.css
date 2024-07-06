@@ -14,6 +14,10 @@
  *= require_self
  */
 
+body {
+  overflow-y: scroll; /* Show vertical scrollbar */
+}
+
 .hex {
   position: absolute;
   top: 50%;
