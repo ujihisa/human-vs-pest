@@ -215,18 +215,19 @@ class Turn
     if @game.winner
       raise 'must not happen: The game is already finished'
     else
-      @actionable_units.each do |player_id, units|
-        player = Player.find(player_id)
-        units.each do |u|
-          @messages << "#{player.japanese}: #{u.loc.inspect}にいるユニットが回復しました"
-          u.hp = [u.hp + 3, u.max_hp(@game.world)].min
-        end
-      end
       @game.tick!
       t = Turn.new(num: @num + 1, game: @game)
+
       t.game.world.unitss.each do |p_id, units|
         p = Player.find(p_id)
+
         units.each do |u|
+          if u.loc == t.game.world.buildings.of(p.id, :base).loc && u.hp < u.max_hp(t.game.world)
+            new_hp = [u.hp + 5, u.max_hp(t.game.world)].min
+            t.messages << "#{p.japanese}: 拠点でユニットが回復しました (HP #{u.hp} -> #{new_hp})"
+            u.hp = new_hp
+          end
+
           t.unit_passive_action!(p, u)
         end
       end

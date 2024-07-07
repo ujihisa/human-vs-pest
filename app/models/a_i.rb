@@ -44,10 +44,10 @@ module AI
 
     uas = locs.map {|loc| [loc, UnitAction.reason(game, unit, loc)] }
 
-    # セルフケア最優先
-    if unit.hp <= unit.max_hp(game.world) / 2
-      return nil
-    end
+    # TODO: 条件付きで、HPが減ったら拠点に戻って回復
+    # if unit.hp <= unit.max_hp(game.world) / 2
+    #   return nil
+    # end
 
     # 次いで近接攻撃
     if ua = uas.find { _1[1].id == :melee_attack }

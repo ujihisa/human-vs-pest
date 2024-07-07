@@ -7,6 +7,10 @@
   });
 </script>
 
+<% if false %>
+<div style="position: absolute; top: <%= click_location[:y] %>px; left: <%= click_location[:x] %>px; height: 2px; width; 2px; border: solid 3px red;"></div>
+<% end %>
+
 <% your_base = turn.game.world.buildings.of(your_player.id, :base) if your_player %>
 <% menu_actionable_locs = menu_action_focus ? turn.menu_actionable_actions(your_player).fetch(menu_action_focus.id, []) : [] %>
 <div class="row">
@@ -57,11 +61,13 @@
               <%= turn.game.world.move_distance(your_player.id, your_base.loc, u.loc) %>)
             </li>
             <li class="list-group-item">
-              1ターンそのユニットが何も行動しなければ、HPが <strong>3</strong> 回復します。
-            </li>
-            <li class="list-group-item">
               <small>
-                最大HPは、拠点からの移動距離によって変化します。
+                外を歩くたびにHPが1ずつ減ります。
+                <ul>
+                  <li>ただし、自陣営の建設物 <small>(例: 拠点・農地・小道・バリケードなど)</small> の上では減りません。</li>
+                  <li>また、これで死亡することはありません。</li>
+                </ul>
+                拠点の上でターンを完了することで、HPが5回復します。
               </small>
             </li>
           </ul>
@@ -127,7 +133,9 @@
     <% end %>
   </div>
 
-  <div class="col-md-4 col-8 order-2">
+  <div class="col-md-4 col-8 order-2"
+       oncontextmenu="live.forward('world', {type: 'rightclick'}); return false;"
+       >
     <% if turn.game.winner %>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
         <%= turn.game.winner.japanese %>の勝ち
@@ -147,11 +155,14 @@
         <% background_img = building&.background_img %>
         <% padding_top = x.even? ? 64*y : 64*y + 32 %>
         <% padding_left = 48*x %>
-        <div
-            style="position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_left %>px 0px; user-select: none;"
-            onclick="live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY});"
-            oncontextmenu="live.forward('world', {type: 'rightclick', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY}); return false;"
+        <div style="pointer-events: none; position: absolute; height: 64px; width: 64px; margin: <%= padding_top %>px <%= padding_left %>px 0px; user-select: none;"
+             >
+          <div
+            class="hex"
+            style="pointer-events: auto; height: 48px; width: 32px;"
+            onclick="window.event = event; live.forward('world', {type: 'click', x: <%= x %>, y: <%= y %>, clientX: event.clientX, clientY: event.clientY, offsetX: event.offsetX, offsetY: event.offsetY});"
             >
+          </div>
           <div class="hex size64">
             <%= image_tag(background_img || 'backgrounds/nil.png', style: 'height: 64px; width: 64px;') %>
           </div>
@@ -178,8 +189,8 @@
           <% end %>
           <% if focus  %>
             <% if turn.unit_actionable_locs(your_player, focus).include?(loc) %>
-              <div class="hex size64">
-                <%= image_tag("backgrounds/unit_actionable.png", style: 'height: 64px; width: 64px;') %>
+              <div class="hex">
+                <%= image_tag("backgrounds/unit_actionable.png", style: 'height: 48px; width: 48px;') %>
               </div>
               <div class="hex text-nowrap" style="font-size: 16px;">
                 <%= UnitAction.reason(turn.game, focus, loc).japanese %>
@@ -188,8 +199,8 @@
           <% end %>
 
           <% if menu_actionable_locs.include?(loc) %>
-            <div class="hex" style="font-size: 32px;">
-              <%= image_tag("backgrounds/menu_actionable.png", style: 'height: 64px; width: 64px;') %>
+            <div class="hex">
+              <%= image_tag("backgrounds/menu_actionable.png", style: 'height: 48px; width: 48px;') %>
             </div>
             <div class="hex text-nowrap" style="font-size: 16px;">
               <%= menu_action_focus.japanese %>

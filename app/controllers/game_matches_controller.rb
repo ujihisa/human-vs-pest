@@ -23,6 +23,7 @@ class WorldTag < Live::View
     @your_player = @data[:your_player_id]&.then { Player.find(_1.to_sym) }
     @ai_player = @data[:ai_player_id]&.then { Player.find(_1.to_sym) }
     @notify_turn_next = nil
+    # @debug_click_location = {x: 0, y: 0}
   end
 
   private def publish_update!
@@ -102,6 +103,7 @@ class WorldTag < Live::View
         hexes_view: @g[:turn].game.world.hexes_view(exclude_background: true),
         menu_action_focus: @menu_action_focus,
         notify_turn_next: @notify_turn_next,
+        # debug_click_location: @debug_click_location,
       },
     ))
   end
@@ -110,6 +112,8 @@ class WorldTag < Live::View
     pp event
     case event[:type]
     when 'click'
+      # @debug_click_location = {x: event[:clientX], y: event[:clientY]}
+
       loc = Location.new(event[:x], event[:y])
       @help_focus_loc = (@help_focus_loc == loc) ? nil : loc
 
