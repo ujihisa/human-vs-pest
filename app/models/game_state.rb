@@ -108,13 +108,10 @@ class GameState
 end
 
 if __FILE__ == $0
-  require_relative 'world'
-  require_relative 'turn'
-  require_relative 'location'
-  require_relative 'building'
-  require_relative 'unit'
-  require_relative 'a_i'
-  require_relative 'menu_actions'
+  Dir.glob('./app/models/*.rb') do |fname|
+    next if /ApplicationRecord/ =~ File.read(fname)
+    require(fname.sub('.rb', ''))
+  end
 
   turn = Turn.new(
     num: 1,

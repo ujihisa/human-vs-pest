@@ -9,13 +9,13 @@ Unit = Struct.new(:player_id, :loc, :hp) do
     Player.find(player_id)
   end
 
-  # 拠点との移動距離に依存する
   def max_hp(world)
-    base = world.buildings[player_id].find { _1.id == :base }
-    [
-      8 - world.move_distance(player_id, base.loc, loc),
-      1,
-    ].max
+    8
+    # base = world.buildings[player_id].find { _1.id == :base }
+    # [
+    #   8 - world.move_distance(player_id, base.loc, loc),
+    #   1,
+    # ].max
   end
 
   # returns [(Integer, Integer)]
