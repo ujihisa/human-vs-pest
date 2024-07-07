@@ -104,6 +104,7 @@ class Turn
 
   def unit_passive_action!(player, unit)
     opponent = player.opponent
+
     case @game.world.buildings.at(unit.loc)
     in Building(player_id: ^(player.id), id: :fruits) => b
       @messages << "#{player.japanese}: #{b.id}を収穫しました"
@@ -163,19 +164,19 @@ class Turn
     when :build_farm
       @game.resources[player.id][:seed] = @game.resources[player.id][:seed].add_amount(-1)
       @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :seeds0, loc: loc)
-    when :melee_attack
-      target_unit = @game.world.unitss[player.opponent.id].find { _1.loc == loc }
-      if unit.hp == target_unit.hp
-        unit.hp = 1
-        target_unit.hp = 1
-      else
-        damage = [unit.hp, target_unit.hp].min
-        unit.hp -= damage
-        target_unit.hp -= damage
-      end
-
-      postprocess_death(unit) if unit.dead?
-      postprocess_death(target_unit) if target_unit.dead?
+    # when :melee_attack
+    #   target_unit = @game.world.unitss[player.opponent.id].find { _1.loc == loc }
+    #   if unit.hp == target_unit.hp
+    #     unit.hp = 1
+    #     target_unit.hp = 1
+    #   else
+    #     damage = [unit.hp, target_unit.hp].min
+    #     unit.hp -= damage
+    #     target_unit.hp -= damage
+    #   end
+    # 
+    #   postprocess_death(unit) if unit.dead?
+    #   postprocess_death(target_unit) if target_unit.dead?
     end
 
     @actionable_units[player.id] -= [unit]
@@ -198,21 +199,55 @@ class Turn
     else
       @game.tick!
       t = Turn.new(num: @num + 1, game: @game)
+      t.process_preturn
+      t
+    end
+  end
 
-      t.game.world.unitss.each do |p_id, units|
-        p = Player.find(p_id)
-
-        units.each do |u|
-          if u.loc == t.game.world.buildings.of(p.id, :base).loc && u.hp < u.max_hp(t.game.world)
-            new_hp = [u.hp + 5, u.max_hp(t.game.world)].min
-            t.messages << "#{p.japanese}: 拠点でユニットが回復しました (HP #{u.hp} -> #{new_hp})"
-            u.hp = new_hp
-          end
-
-          t.unit_passive_action!(p, u)
+  # call this only from next()
+  def process_preturn
+    @game.world.unitss.each do |p_id, units|
+      p = Player.find(p_id)
+      units.each do |unit|
+        # 拠点回復
+        if unit.loc == @game.world.buildings.of(p.id, :base).loc && unit.hp < unit.max_hp(@game.world)
+          new_hp = [unit.hp + 5, unit.max_hp(@game.world)].min
+          @messages << "#{p.japanese}: 拠点でユニットが回復しました (HP #{unit.hp} -> #{new_hp})"
+          unit.hp = new_hp
         end
       end
-      t
+    end
+
+    finished_battles = Set.new
+    @game.world.unitss.each do |p_id, units|
+      p = Player.find(p_id)
+      units.each do |unit|
+        # 近接戦闘
+        @game.world.neighbours(unit.loc).each do |loc|
+          next if unit.dead?
+
+          u = @game.world.unitss[p.opponent.id].find { _1.loc == loc }
+          next if !u || u.dead?
+
+          key = [[unit.loc.x, unit.loc.y], [u.loc.x, u.loc.y]].sort
+          next if finished_battles.include?(key)
+          finished_battles << key
+
+          damage = [3, unit.hp, u.hp].min
+          @messages << "⚔ ユニット#{unit.loc.inspect}とユニット#{u.loc.inspect}が戦闘し、お互いに#{damage}ダメージを与えました"
+          unit.hp -= damage
+          postprocess_death(unit) if unit.dead?
+          u.hp -= damage
+          postprocess_death(u) if u.dead?
+        end
+      end
+    end
+
+    @game.world.unitss.each do |p_id, units|
+      p = Player.find(p_id)
+      units.each do |unit|
+        unit_passive_action!(p, unit)
+      end
     end
   end
 end

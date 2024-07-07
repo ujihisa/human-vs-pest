@@ -56,20 +56,6 @@ module AI
       end
     end
 
-    # 次いで近接攻撃
-    if ua = uas.find { _1[1].id == :melee_attack }
-      # 相手のHPの方が高いときは、5%の確率で攻撃する
-      # ここでいう相手とは、loc = ua[0]の位置にいるunitのこと
-      if game.world.unitss[player.opponent.id].any? {|u| u.loc == ua[0] && unit.hp < u.hp }
-        if rand(100) < 5
-          return ua
-        end
-      else
-        # そうでないなら必ず攻撃する
-        return ua
-      end
-    end
-
     # 相手が自拠点に近づいてきていれば戻る
     min_dist = game.world.unitss[player.opponent.id].map {|u| distance(u.loc, game.world.buildings.of(player.id, :base).loc) }.min
     if min_dist && min_dist < 4
