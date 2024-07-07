@@ -124,7 +124,7 @@ if __FILE__ == $0
   loop do
     players.each do |player|
       while ((action, loc) = AI.find_menu_action(turn, player, turn.menu_actionable_actions(player)))
-        turn.menu_action!(player, action, loc)
+        turn.do_menu_action!(player, action, loc)
       end
 
       turn.actionable_units[player.id].each do |u|

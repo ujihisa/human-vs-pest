@@ -55,48 +55,24 @@ class Turn
     }.to_h
   end
 
-  def menu_action!(player, action, loc)
-    MenuActions.at(@game, player)[action].cost.each do |k, amount|
+  def do_menu_action!(player, action, loc)
+    menu_action = MenuActions.at(@game, player)[action]
+    menu_action.cost.each do |k, amount|
       @game.resources[player.id][k] = @game.resources[player.id][k].add_amount(-amount)
     end
 
-    case action
-    when :build_farm
+    case menu_action
+    in MenuAction(build_id: build_id, location_type: :unit) if build_id
+      new_building = Building.new(player_id: player.id, id: build_id, loc: loc)
       if b = @game.world.buildings.at(loc)
-        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、農地にしました"
+        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、#{new_building.view} にしました"
         @game.world.buildings.delete_at(loc)
       else
-        @messages << "#{player.japanese}: #{loc.inspect}を農地にしました"
+        @messages << "#{player.japanese}: #{loc.inspect}を #{new_building.view} にしました"
       end
 
-      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :seeds0, loc: loc)
-    when :build_trail
-      if b = @game.world.buildings.at(loc)
-        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、小道にしました"
-        @game.world.buildings.delete_at(loc)
-      else
-        @messages << "#{player.japanese}: #{loc.inspect}を小道にしました"
-      end
-
-      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :trail, loc: loc)
-    when :build_barricade
-      if b = @game.world.buildings.at(loc)
-        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、バリケードにしました"
-        @game.world.buildings.delete_at(loc)
-      else
-        @messages << "#{player.japanese}: #{loc.inspect}をバリケードにしました"
-      end
-
-      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :barricade, loc: loc)
-    when :place_bomb
-      if b = @game.world.buildings.at(loc)
-        @messages << "#{player.japanese}: #{b.view}#{loc.inspect}を破壊して、爆弾を設置しました"
-        @game.world.buildings.delete_at(loc)
-      else
-        @messages << "#{player.japanese}: #{loc.inspect}に爆弾を設置しました"
-      end
-      @game.world.buildings[player.id] << Building.new(player_id: player.id, id: :bomb0, loc: loc)
-    when :trigger_bomb
+      @game.world.buildings[player.id] << new_building
+    in MenuAction(id: :trigger_bomb)
       @messages << "#{player.japanese}: #{loc.inspect}の爆弾を起爆しました!"
       @game.world.buildings.delete_at(loc)
       [loc, *@game.world.neighbours(loc)].each do |nloc|
@@ -109,7 +85,7 @@ class Turn
           postprocess_death(u)
         end
       end
-    when :spawn_unit
+    in MenuAction(id: :spawn_unit)
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
       new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player.id, :base).loc)
@@ -117,7 +93,7 @@ class Turn
       @game.total_spawned_units[player.id] += 1
       @actionable_units[player.id] += [new_unit]
     else
-      p "Not implemented yet: #{action}"
+      raise "Not implemented yet: #{menu_action}"
     end
 
     if @game.winner

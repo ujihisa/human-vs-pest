@@ -67,7 +67,7 @@ class WorldTag < Live::View
       Async do
         until @g[:turn].game.winner do
           while ((action, loc) = AI.find_menu_action(@g[:turn], @ai_player, @g[:turn].menu_actionable_actions(@ai_player)))
-            @g[:turn].menu_action!(@ai_player, action, loc)
+            @g[:turn].do_menu_action!(@ai_player, action, loc)
           end
           publish_update!; sleep 1
 
@@ -127,7 +127,7 @@ class WorldTag < Live::View
         if @menu_action_focus
           locs = @g[:turn].menu_actionable_actions(@your_player)[@menu_action_focus.id]
           if locs && locs.include?(loc)
-            @g[:turn].menu_action!(@your_player, @menu_action_focus.id, loc)
+            @g[:turn].do_menu_action!(@your_player, @menu_action_focus.id, loc)
           end
           @menu_action_focus = @help_focus_loc = nil
         else
@@ -170,7 +170,7 @@ class WorldTag < Live::View
         loop do
           players.each do |player|
             while ((action, loc) = AI.find_menu_action(@g[:turn], player, @g[:turn].menu_actionable_actions(player)))
-              @g[:turn].menu_action!(player, action, loc)
+              @g[:turn].do_menu_action!(player, action, loc)
             end
             publish_update!; sleep 0.1
 
