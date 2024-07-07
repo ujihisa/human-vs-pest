@@ -2,7 +2,9 @@
 <script>
   document.addEventListener('keyup', function(event) {
     if (event.key === 'Enter') {
-      live.forward('world', {type: 'complete'});
+      live.forward('world', {type: 'key_enter'});
+    } else if (event.key === 'Escape') {
+      live.forward('world', {type: 'key_esc'});
     }
   });
 </script>

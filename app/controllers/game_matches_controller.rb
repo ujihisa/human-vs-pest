@@ -148,11 +148,11 @@ class WorldTag < Live::View
       else
         @menu_action_focus = menu_action_focus
       end
-    when 'rightclick'
+    when 'rightclick', 'key_esc'
       @help_focus_loc = nil
       @focus = nil
       @menu_action_focus = nil
-    when 'complete'
+    when 'complete', 'key_enter'
       @g[:completed][@your_player] = true
       @focus = @help_focus_loc = nil
       publish_update!

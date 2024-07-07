@@ -155,7 +155,12 @@ class Turn
     when :move
       unit.loc = loc
       unit_passive_action!(player, unit)
-      unit.hp = [unit.hp, unit.max_hp(@game.world)].min
+      # unit.hp = [unit.hp, unit.max_hp(@game.world)].min
+      if b = @game.world.buildings.at(loc) and b.player == player
+        # ノーダメージ
+      else
+        unit.hp = [unit.hp - 1, 1].max
+      end
     when :harvest_woods
       @game.resources[player.id][:wood] = @game.resources[player.id][:wood].add_amount(1)
       building = @game.world.buildings.at(loc)
