@@ -34,11 +34,13 @@ class World
       pest: Location.new(size_x / 2, size_y - 1),
     }
 
-    vacant_locs = [*0...size_x].product([*1...size_y.-(1)]).map { Location.new(*_1) }
+    whitelist = bases.values.flat_map {|l| _neighbours(l, size_x, size_y) }
+
+    vacant_locs = [*0...size_x].product([*0...size_y]).map { Location.new(*_1) } - whitelist
     vacant_locs.shuffle!
     trees = vacant_locs.shift(size_x * size_y * 0.2)
     ponds = vacant_locs.shift(size_x * size_y * 0.1)
-    rocks = vacant_locs.shift(size_x * size_y * 0.05)
+    rocks = vacant_locs.shift(size_x * size_y * 0.1)
 
     buildings = {
       human: [
@@ -138,9 +140,7 @@ class World
     Math.sqrt((loc1.x - loc0.x) ** 2 + (loc1.y - loc0.y) ** 2) - bonus
   end
 
-  def neighbours(loc)
-    raise "Missing loc" unless loc
-
+  def self._neighbours(loc, size_x, size_y)
     # hexなので現在位置に応じて非対称
     diffs =
       if loc.x.odd?
@@ -170,9 +170,14 @@ class World
     diffs.map {|dx, dy|
       Location.new(loc.x + dx, loc.y + dy)
     }.select {|loc|
-      loc in Location(nx, ny)
-      (0...@size_x).cover?(nx) && (0...@size_y).cover?(ny)
+      (0...size_x).cover?(loc.x) && (0...size_y).cover?(loc.y)
     }
+  end
+
+  def neighbours(loc)
+    raise "Missing loc" unless loc
+
+    World._neighbours(loc, @size_x, @size_y)
   end
 
   def not_passable?(player, loc)

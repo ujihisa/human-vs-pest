@@ -32,12 +32,15 @@
           <ul class="list-group">
             <li class="list-group-item">
               <%= b.view %>
-              <p>
-              <%= b.description %>
-              </p>
+              <% if b.hp %>
+                HP: <strong><%= b.hp %></strong>
+              <% end %>
             </li>
             <li class="list-group-item">
-              所有陣営: <%= b.player&.japanese || 'なし' %>
+              <%= b.desc %>
+            </li>
+            <li class="list-group-item">
+              陣営: <%= b.player&.japanese || 'なし' %>
             </li>
             <% if b.hp %>
               <li class="list-group-item">
@@ -55,6 +58,7 @@
           <h5>ユニット</h5>
           <ul class="list-group">
             <li class="list-group-item">
+              <%= u.player.emoji %>
               HP:
               <strong>
               <%= u.hp %> / <%= u.max_hp(turn.game.world) %>
