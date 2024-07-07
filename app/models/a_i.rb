@@ -44,10 +44,17 @@ module AI
 
     uas = locs.map {|loc| [loc, UnitAction.reason(game, unit, loc)] }
 
-    # TODO: 条件付きで、HPが減ったら拠点に戻って回復
-    # if unit.hp <= unit.max_hp(game.world) / 2
-    #   return nil
-    # end
+    # HPが1なら、拠点に戻る
+    if unit.hp == 1
+      if unit.loc == game.world.buildings.of(player.id, :base).loc
+        return nil
+      else
+        ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
+          game.world.move_distance(player.id, loc, game.world.buildings.of(player.id, :base).loc)
+        }
+        return ua if ua
+      end
+    end
 
     # 次いで近接攻撃
     if ua = uas.find { _1[1].id == :melee_attack }
@@ -72,8 +79,8 @@ module AI
       return ua if ua
     end
 
-    # 相手よりHP合計が多ければrage mode
-    if game.world.unitss[player.opponent.id].sum(&:hp) < game.world.unitss[player.id].sum(&:hp)
+    # 累計ユニット作成数が4を超えたか、あるいは敵ユニット数が0なら、rage mode
+    if 4 <= game.total_spawned_units[player.id] or game.world.unitss[player.opponent.id].size == 0
       ua = uas.select {|_, a| [:move, :harvest_woods, :mine_ore, :attack_barricade].include?(a.id) }.min_by {|loc, _|
         game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent.id, :base).loc)
       }
