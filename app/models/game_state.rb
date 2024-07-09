@@ -34,11 +34,21 @@ PlayerResource = Data.define(:resource_id, :amount) do
   end
 
   def view
-    if 5 < amount
-      "#{resource.emoji}x#{amount} "
-    else
-      "#{resource.emoji}" * amount
-    end
+    # if 5 < amount
+    #   "#{resource.emoji}x#{amount} "
+    # else
+    #   "#{resource.emoji}" * amount
+    # end
+
+    img = img()
+    img ? "#{ActionController::Base.helpers.image_tag(img, title: resource_id, style: 'width: 1.5em; height: 1.5em;')}x#{amount}" : "#{resource.emoji}x#{amount}"
+              # <%= img ? image_tag(img, style: 'width: 1.2em; height: 1.2em;') : player_resource.emoji %>
+              # x
+              # <%= amount %>
+  end
+
+  private def img
+    File.exist?("app/assets/images/resources/#{resource_id}.png") ? "resources/#{resource_id}.png" : nil
   end
 end
 
