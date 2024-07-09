@@ -2,12 +2,16 @@
 <script>
   document.addEventListener('keyup', function(event) {
     if (event.key === 'Enter') {
-      live.forward('world', {type: 'key_enter'});
+      if (document.getElementById('operation_completed_of_you').value === 'false') {
+        live.forward('world', {type: 'key_enter'});
+      }
     } else if (event.key === 'Escape') {
       live.forward('world', {type: 'key_esc'});
     }
   });
 </script>
+
+<input type="hidden" id="operation_completed_of_you" value="<%= operation_completed[your_player.id] ? 'true' : 'false' %>">
 
 <% if false %>
 <div style="position: absolute; top: <%= click_location[:y] %>px; left: <%= click_location[:x] %>px; height: 2px; width; 2px; border: solid 3px red;"></div>
@@ -291,8 +295,8 @@
             <div class="d-grid gap-2 col-6 mx-auto">
               <button
                   class="btn btn-secondary"
-                  <%= 'disabled' if completed[your_player] || turn.game.winner %>
-                  onclick="live.forward('world', {type: 'complete'});">
+                  <%= 'disabled' if operation_completed[your_player.id] || turn.game.winner %>
+                  onclick="live.forward('world', {type: 'operation_complete'});">
                 <nobr>
                   ターン終了↵
                 </nobr>
@@ -305,24 +309,32 @@
 
     <div class="container">
       <h5>Debug</h5>
-      <input class="btn btn-secondary"
-             type="submit"
-             value="Autoplay all"
-             onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY}); return false;">
-      <input class="btn btn-secondary"
-             type="submit"
-             value="Reset (要リロード)"
-             onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY}); return false;">
+
+      <div class="form-check">
+        <input
+            onclick="live.forward('world', {type: 'enable_autoplay', checked: this.checked});"
+            <%= you_autoplay ? 'checked' : '' %>
+            class="form-check-input" type="checkbox" id="flexCheckDefault">
+        <label class="form-check-label" for="flexCheckDefault">
+          以後ずっとAIに任せる
+        </label>
+      </div>
+
       <% if Rails.env.development? %>
         <input class="btn btn-secondary"
                type="submit"
                value="このターンをAIに任せる"
-               onclick="live.forward('world', {type: 'debug_do_ai', clientX: event.clientX, clientY: event.clientY}); return false;">
+               onclick="live.forward('world', {type: 'oneshot_autoplay', clientX: event.clientX, clientY: event.clientY}); return false;">
         <input class="btn btn-secondary"
                type="submit"
                value="デバグ用、ユニットの再行動 & HP全快"
                onclick="live.forward('world', {type: 'debug_unit_actionable_again', clientX: event.clientX, clientY: event.clientY}); return false;">
       <% end %>
+
+      <input class="btn btn-secondary"
+             type="submit"
+             value="Reset (要リロード)"
+             onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY}); return false;">
     </div>
 
     <div class="container">

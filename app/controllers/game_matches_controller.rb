@@ -13,8 +13,7 @@ class WorldTag < Live::View
     game_match_id = @data[:game_match_id].to_i # to_i必須。WorldTag.new からはIntegerで、Live::Page.newからはStringで呼ばれる。
     GAME[game_match_id] ||= {
       turn: Turn.new(num: 1, game: GameState.new(world: World.create(size_x: 5, size_y: 8))),
-      completed: { Human => false, Pest => false },
-      autoplaying: false,
+      operation_completed: { human: false, pest: false },
       ai_started: false,
       subscribers: {},
     }
@@ -23,28 +22,39 @@ class WorldTag < Live::View
     @your_player = @data[:your_player_id]&.then { Player.find(_1.to_sym) }
     @ai_player = @data[:ai_player_id]&.then { Player.find(_1.to_sym) }
     @notify_turn_next = nil
+    @you_autoplay = false
     # @debug_click_location = {x: 0, y: 0}
   end
 
   private def publish_update!
     @g[:subscribers].each_value do |q|
-      q << :update!
+      q << [:update!]
     end
   end
 
-  private def publish_turn_complete!
-    @g[:subscribers].each_value do |q|
-      q << :turn_complete!
-    end
-  end
+  private def operation_complete!(player_id)
+    @g[:operation_completed][player_id] = true
 
-  private def set_notify_turn_next!
-    @notify_turn_next = @g[:turn].num
-    Async do
-      sleep 1
-      if @notify_turn_next == @g[:turn].num
-        @notify_turn_next = nil
+    if @g[:operation_completed].all? { _2 } && !@g[:turn].game.winner
+      @g[:operation_completed] = { human: false, pest: false }
+      @g[:turn] = @g[:turn].next
+
+      if @ai_player
+        run_ai(@ai_player)
       end
+      if @you_autoplay
+        Async do
+          sleep 0.5
+          run_ai(@your_player)
+        end
+      end
+
+      # publish
+      @g[:subscribers].each_value do |q|
+        q << [:turn_completed!, player_id]
+      end
+    else
+      update!
     end
   end
 
@@ -54,9 +64,9 @@ class WorldTag < Live::View
 
     @g[:subscribers][self] = Async::Queue.new
 
-    if @ai_player && !@g[:ai_started] && !@g[:turn].game.winner
+    if @ai_player && !@g[:ai_started]
       @g[:ai_started] = true
-      run_ai()
+      run_ai(@ai_player)
     end
 
     Async do
@@ -65,20 +75,19 @@ class WorldTag < Live::View
 
         break unless @page
         case mes
-        when :update!
+        in [:update!]
           update!
-        when :turn_complete!
-          if @g[:completed].all? { _2 }
-            @g[:completed] = { Human => false, Pest => false }
-            @focus = nil
-            @g[:turn] = @g[:turn].next
-            set_notify_turn_next!
-            update!
-
-            if @ai_player && !@g[:turn].game.winner
-              run_ai()
+        in [:turn_completed!, player_id]
+          @notify_turn_next = @g[:turn].num
+          Async do
+            update! if @page
+            sleep 1
+            if @notify_turn_next == @g[:turn].num
+              @notify_turn_next = nil
+              update! if @page
             end
           end
+
         else
           raise "Unknown message: #{mes}"
         end
@@ -87,22 +96,21 @@ class WorldTag < Live::View
     end
   end
 
-  def run_ai
-    p :run_ai
-    Async do
-      while ((action, loc) = AI.find_menu_action(@g[:turn], @ai_player, @g[:turn].menu_actionable_actions(@ai_player)))
-        @g[:turn].do_menu_action!(@ai_player, action, loc)
-      end
-      publish_update!; sleep 1
+  def run_ai(ai_player)
+    return if @g[:turn].game.winner
 
-      @g[:turn].actionable_units[@ai_player.id].each do |u|
-        locs = @g[:turn].unit_actionable_locs(@ai_player, u)
-        (loc, ua) = AI.unit_action_for(@g[:turn].game, @ai_player, u, locs)
-        @g[:turn].unit_action!(@ai_player, u, loc, ua.id) if ua
+    Async do
+      while ((action, loc) = AI.find_menu_action(@g[:turn], ai_player, @g[:turn].menu_actionable_actions(ai_player)))
+        @g[:turn].do_menu_action!(ai_player, action, loc)
       end
-      @g[:completed][@ai_player] = true
-      publish_turn_complete!
-      publish_update!; sleep 1
+      # publish_update!; sleep 0.5
+
+      @g[:turn].actionable_units[ai_player.id].each do |u|
+        locs = @g[:turn].unit_actionable_locs(ai_player, u)
+        (loc, ua) = AI.unit_action_for(@g[:turn].game, ai_player, u, locs)
+        @g[:turn].unit_action!(ai_player, u, loc, ua.id) if ua
+      end
+      operation_complete!(ai_player.id)
     end
   end
 
@@ -113,16 +121,19 @@ class WorldTag < Live::View
         turn: @g[:turn],
         help_focus_loc: @help_focus_loc,
         focus: @focus,
-        completed: @g[:completed],
+        operation_completed: @g[:operation_completed],
         hexes_view: @g[:turn].game.world.hexes_view(exclude_background: true),
         menu_action_focus: @menu_action_focus,
         notify_turn_next: @notify_turn_next,
+        you_autoplay: @you_autoplay,
         # debug_click_location: @debug_click_location,
       },
     ))
   end
 
   def handle(event)
+    return unless @your_player
+
     # pp event
     case event[:type]
     when 'click'
@@ -135,6 +146,7 @@ class WorldTag < Live::View
         if @g[:turn].unit_actionable_locs(@your_player, @focus).include?(loc)
           action = UnitAction.reason(@g[:turn].game, @focus, loc)
           @g[:turn].unit_action!(@your_player, @focus, loc, action.id)
+          publish_update!
         end
         @focus = @help_focus_loc = nil
       else
@@ -142,6 +154,7 @@ class WorldTag < Live::View
           locs = @g[:turn].menu_actionable_actions(@your_player)[@menu_action_focus.id]
           if locs && locs.include?(loc)
             @g[:turn].do_menu_action!(@your_player, @menu_action_focus.id, loc)
+            publish_update!
           end
           @menu_action_focus = @help_focus_loc = nil
         else
@@ -150,6 +163,7 @@ class WorldTag < Live::View
           end
         end
       end
+      update!
     when 'menu'
       @focus = nil
 
@@ -162,57 +176,23 @@ class WorldTag < Live::View
       else
         @menu_action_focus = menu_action_focus
       end
+      update!
     when 'rightclick', 'key_esc'
       @help_focus_loc = nil
       @focus = nil
       @menu_action_focus = nil
-    when 'complete', 'key_enter'
-      @g[:completed][@your_player] = true
+      update!
+    when 'operation_complete', 'key_enter'
       @focus = @help_focus_loc = nil
-      publish_turn_complete!
-      publish_update!
-    when 'autoplay_all'
-      return if @g[:autoplaying]
-      @g[:autoplaying] = true
-
-      Async do
-        players = [Human, Pest]
-        loop do
-          players.each do |player|
-            while ((action, loc) = AI.find_menu_action(@g[:turn], player, @g[:turn].menu_actionable_actions(player)))
-              @g[:turn].do_menu_action!(player, action, loc)
-            end
-            publish_update!; sleep 0.1
-
-            @g[:turn].actionable_units[player.id].each do |u|
-              locs = @g[:turn].unit_actionable_locs(player, u)
-              (loc, ua) = AI.unit_action_for(@g[:turn].game, player, u, locs)
-              @g[:turn].unit_action!(player, u, loc, ua.id) if ua
-            end
-            publish_update!; sleep 0.1
-          end
-          sleep 0.3
-
-          break if @g[:turn].game.winner
-          @g[:turn] = @g[:turn].next
-          set_notify_turn_next!
-        end
-      end
+      operation_complete!(@your_player.id)
+      update!
+    when 'enable_autoplay'
+      @you_autoplay = event[:checked]
+      run_ai(@your_player)
     when 'reset'
       exit
-    when 'debug_do_ai'
-      return if @g[:turn].game.winner
-      while ((action, loc) = AI.find_menu_action(@g[:turn], @your_player, @g[:turn].menu_actionable_actions(@your_player)))
-        @g[:turn].do_menu_action!(@your_player, action, loc)
-      end
-
-      @g[:turn].actionable_units[@your_player.id].each do |u|
-        locs = @g[:turn].unit_actionable_locs(@your_player, u)
-        (loc, ua) = AI.unit_action_for(@g[:turn].game, @your_player, u, locs)
-        @g[:turn].unit_action!(@your_player, u, loc, ua.id) if ua
-      end
-      @g[:completed][@your_player] = true
-      publish_turn_complete!
+    when 'oneshot_autoplay'
+      run_ai(@your_player)
     when 'debug_unit_actionable_again'
       human_units = @g[:turn].game.world.unitss[:human]
       @g[:turn].actionable_units[:human] = human_units
@@ -221,8 +201,10 @@ class WorldTag < Live::View
       end
       # humanのresourcesのwoodを+10
       @g[:turn].game.resources[:human].then { _1[:wood] = _1[:wood].add_amount(10) }
+      update!
+    else
+      raise "Unknown event: #{event[:type]}"
     end
-    publish_update!
   end
 end
 

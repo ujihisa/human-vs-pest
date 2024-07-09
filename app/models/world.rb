@@ -34,7 +34,7 @@ class World
       pest: Location.new(size_x / 2, size_y - 1),
     }
 
-    whitelist = bases.values.flat_map {|l| _neighbours(l, size_x, size_y) }
+    whitelist = bases.values.flat_map {|l| _neighbours(l, size_x, size_y) } + bases.values
 
     vacant_locs = [*0...size_x].product([*0...size_y]).map { Location.new(*_1) } - whitelist
     vacant_locs.shuffle!
