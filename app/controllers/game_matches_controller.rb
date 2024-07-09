@@ -42,12 +42,6 @@ class WorldTag < Live::View
       if @ai_player
         run_ai(@ai_player)
       end
-      if @you_autoplay
-        Async do
-          sleep 0.5
-          run_ai(@your_player)
-        end
-      end
 
       # publish
       @g[:subscribers].each_value do |q|
@@ -78,6 +72,13 @@ class WorldTag < Live::View
         in [:update!]
           update!
         in [:turn_completed!, player_id]
+          if @you_autoplay
+            Async do
+              sleep 0.5
+              run_ai(@your_player)
+            end
+          end
+
           @notify_turn_next = @g[:turn].num
           Async do
             update! if @page
@@ -96,21 +97,20 @@ class WorldTag < Live::View
     end
   end
 
-  def run_ai(ai_player)
+  def run_ai(player)
     return if @g[:turn].game.winner
 
     Async do
-      while ((action, loc) = AI.find_menu_action(@g[:turn], ai_player, @g[:turn].menu_actionable_actions(ai_player)))
-        @g[:turn].do_menu_action!(ai_player, action, loc)
+      while ((action, loc) = AI.find_menu_action(@g[:turn], player, @g[:turn].menu_actionable_actions(player)))
+        @g[:turn].do_menu_action!(player, action, loc)
       end
-      # publish_update!; sleep 0.5
 
-      @g[:turn].actionable_units[ai_player.id].each do |u|
-        locs = @g[:turn].unit_actionable_locs(ai_player, u)
-        (loc, ua) = AI.unit_action_for(@g[:turn].game, ai_player, u, locs)
-        @g[:turn].unit_action!(ai_player, u, loc, ua.id) if ua
+      @g[:turn].actionable_units[player.id].each do |u|
+        locs = @g[:turn].unit_actionable_locs(player, u)
+        (loc, ua) = AI.unit_action_for(@g[:turn].game, player, u, locs)
+        @g[:turn].unit_action!(player, u, loc, ua.id) if ua
       end
-      operation_complete!(ai_player.id)
+      operation_complete!(player.id)
     end
   end
 

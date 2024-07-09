@@ -11,7 +11,9 @@
   });
 </script>
 
-<input type="hidden" id="operation_completed_of_you" value="<%= operation_completed[your_player.id] ? 'true' : 'false' %>">
+<% if your_player %>
+  <input type="hidden" id="operation_completed_of_you" value="<%= operation_completed[your_player.id] ? 'true' : 'false' %>">
+<% end %>
 
 <% if false %>
 <div style="position: absolute; top: <%= click_location[:y] %>px; left: <%= click_location[:x] %>px; height: 2px; width; 2px; border: solid 3px red;"></div>
