@@ -54,8 +54,15 @@ class WorldTag < Live::View
 
     @g[:subscribers][self] = Async::Queue.new
 
+    if @ai_player && !@g[:ai_started] && !@g[:turn].game.winner
+      @g[:ai_started] = true
+      run_ai()
+    end
+
     Async do
       while mes = @g[:subscribers][self].dequeue
+        p [:receive, mes]
+
         break unless @page
         case mes
         when :update!
@@ -67,6 +74,10 @@ class WorldTag < Live::View
             @g[:turn] = @g[:turn].next
             set_notify_turn_next!
             update!
+
+            if @ai_player && !@g[:turn].game.winner
+              run_ai()
+            end
           end
         else
           raise "Unknown message: #{mes}"
@@ -74,28 +85,24 @@ class WorldTag < Live::View
       end
       @g[:subscribers].delete(self)
     end
+  end
 
-    # AI側を強制実行
-    if @ai_player && !@g[:ai_started]
-      @g[:ai_started] = true
-      Async do
-        until @g[:turn].game.winner do
-          while ((action, loc) = AI.find_menu_action(@g[:turn], @ai_player, @g[:turn].menu_actionable_actions(@ai_player)))
-            @g[:turn].do_menu_action!(@ai_player, action, loc)
-          end
-          publish_update!; sleep 0.5
-
-          @g[:turn].actionable_units[@ai_player.id].each do |u|
-            locs = @g[:turn].unit_actionable_locs(@ai_player, u)
-            (loc, ua) = AI.unit_action_for(@g[:turn].game, @ai_player, u, locs)
-            @g[:turn].unit_action!(@ai_player, u, loc, ua.id) if ua
-          end
-          @g[:completed][@ai_player] = true
-          publish_turn_complete!
-          publish_update!; sleep 0.5
-        end
-        sleep 1
+  def run_ai
+    p :run_ai
+    Async do
+      while ((action, loc) = AI.find_menu_action(@g[:turn], @ai_player, @g[:turn].menu_actionable_actions(@ai_player)))
+        @g[:turn].do_menu_action!(@ai_player, action, loc)
       end
+      publish_update!; sleep 1
+
+      @g[:turn].actionable_units[@ai_player.id].each do |u|
+        locs = @g[:turn].unit_actionable_locs(@ai_player, u)
+        (loc, ua) = AI.unit_action_for(@g[:turn].game, @ai_player, u, locs)
+        @g[:turn].unit_action!(@ai_player, u, loc, ua.id) if ua
+      end
+      @g[:completed][@ai_player] = true
+      publish_turn_complete!
+      publish_update!; sleep 1
     end
   end
 
@@ -167,6 +174,7 @@ class WorldTag < Live::View
     when 'autoplay_all'
       return if @g[:autoplaying]
       @g[:autoplaying] = true
+
       Async do
         players = [Human, Pest]
         loop do
