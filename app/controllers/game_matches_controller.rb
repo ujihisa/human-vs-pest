@@ -32,6 +32,12 @@ class WorldTag < Live::View
     end
   end
 
+  private def publish_turn_complete!
+    @g[:subscribers].each_value do |q|
+      q << :turn_complete!
+    end
+  end
+
   private def set_notify_turn_next!
     @notify_turn_next = @g[:turn].num
     Async do
@@ -54,6 +60,14 @@ class WorldTag < Live::View
         case mes
         when :update!
           update!
+        when :turn_complete!
+          if @g[:completed].all? { _2 }
+            @g[:completed] = { Human => false, Pest => false }
+            @focus = nil
+            @g[:turn] = @g[:turn].next
+            set_notify_turn_next!
+            update!
+          end
         else
           raise "Unknown message: #{mes}"
         end
@@ -69,7 +83,7 @@ class WorldTag < Live::View
           while ((action, loc) = AI.find_menu_action(@g[:turn], @ai_player, @g[:turn].menu_actionable_actions(@ai_player)))
             @g[:turn].do_menu_action!(@ai_player, action, loc)
           end
-          publish_update!; sleep 1
+          publish_update!; sleep 0.5
 
           @g[:turn].actionable_units[@ai_player.id].each do |u|
             locs = @g[:turn].unit_actionable_locs(@ai_player, u)
@@ -77,17 +91,10 @@ class WorldTag < Live::View
             @g[:turn].unit_action!(@ai_player, u, loc, ua.id) if ua
           end
           @g[:completed][@ai_player] = true
-          publish_update!; sleep 1
-
-          # TODO: pubsubかbarrierでawait
-          if @g[:completed].all? { _2 }
-            @g[:completed] = { Human => false, Pest => false }
-            @focus = nil
-            @g[:turn] = @g[:turn].next
-            set_notify_turn_next!
-            publish_update!
-          end
+          publish_turn_complete!
+          publish_update!; sleep 0.5
         end
+        sleep 1
       end
     end
   end
@@ -109,7 +116,7 @@ class WorldTag < Live::View
   end
 
   def handle(event)
-    pp event
+    # pp event
     case event[:type]
     when 'click'
       # @debug_click_location = {x: event[:clientX], y: event[:clientY]}
@@ -155,13 +162,8 @@ class WorldTag < Live::View
     when 'complete', 'key_enter'
       @g[:completed][@your_player] = true
       @focus = @help_focus_loc = nil
+      publish_turn_complete!
       publish_update!
-
-      if @g[:completed].all? { _2 }
-        @g[:completed] = { Human => false, Pest => false }
-        @g[:turn] = @g[:turn].next
-        set_notify_turn_next!
-      end
     when 'autoplay_all'
       return if @g[:autoplaying]
       @g[:autoplaying] = true
@@ -190,6 +192,19 @@ class WorldTag < Live::View
       end
     when 'reset'
       exit
+    when 'debug_do_ai'
+      return if @g[:turn].game.winner
+      while ((action, loc) = AI.find_menu_action(@g[:turn], @your_player, @g[:turn].menu_actionable_actions(@your_player)))
+        @g[:turn].do_menu_action!(@your_player, action, loc)
+      end
+
+      @g[:turn].actionable_units[@your_player.id].each do |u|
+        locs = @g[:turn].unit_actionable_locs(@your_player, u)
+        (loc, ua) = AI.unit_action_for(@g[:turn].game, @your_player, u, locs)
+        @g[:turn].unit_action!(@your_player, u, loc, ua.id) if ua
+      end
+      @g[:completed][@your_player] = true
+      publish_turn_complete!
     when 'debug_unit_actionable_again'
       human_units = @g[:turn].game.world.unitss[:human]
       @g[:turn].actionable_units[:human] = human_units

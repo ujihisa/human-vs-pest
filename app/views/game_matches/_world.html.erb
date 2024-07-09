@@ -308,16 +308,20 @@
       <input class="btn btn-secondary"
              type="submit"
              value="Autoplay all"
-             onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY});">
+             onclick="live.forward('world', {type: 'autoplay_all', clientX: event.clientX, clientY: event.clientY}); return false;">
       <input class="btn btn-secondary"
              type="submit"
              value="Reset (要リロード)"
-             onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY});">
+             onclick="live.forward('world', {type: 'reset', clientX: event.clientX, clientY: event.clientY}); return false;">
       <% if Rails.env.development? %>
         <input class="btn btn-secondary"
                type="submit"
+               value="このターンをAIに任せる"
+               onclick="live.forward('world', {type: 'debug_do_ai', clientX: event.clientX, clientY: event.clientY}); return false;">
+        <input class="btn btn-secondary"
+               type="submit"
                value="デバグ用、ユニットの再行動 & HP全快"
-               onclick="live.forward('world', {type: 'debug_unit_actionable_again', clientX: event.clientX, clientY: event.clientY});">
+               onclick="live.forward('world', {type: 'debug_unit_actionable_again', clientX: event.clientX, clientY: event.clientY}); return false;">
       <% end %>
     </div>
 
