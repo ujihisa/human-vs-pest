@@ -24,9 +24,9 @@ module AI
         when :place_bomb, :trigger_bomb
           neighbours = turn.game.world.neighbours(loc)
 
-          if neighbours.include?(turn.game.world.buildings.of(player.id, :base).loc)
+          if neighbours.include?(turn.game.world.buildings.base(player.id).loc)
             false
-          elsif neighbours.include?(turn.game.world.buildings.of(player.opponent.id, :base).loc)
+          elsif neighbours.include?(turn.game.world.buildings.base(player.opponent.id).loc)
             true
           end
         else
@@ -46,21 +46,21 @@ module AI
 
     # HPが1なら、拠点に戻る
     if unit.hp == 1
-      if unit.loc == game.world.buildings.of(player.id, :base).loc
+      if unit.loc == game.world.buildings.base(player.id).loc
         return nil
       else
         ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
-          game.world.move_distance(player.id, loc, game.world.buildings.of(player.id, :base).loc)
+          game.world.move_distance(player.id, loc, game.world.buildings.base(player.id).loc)
         }
         return ua if ua
       end
     end
 
     # 相手が自拠点に近づいてきていれば戻る
-    min_dist = game.world.unitss[player.opponent.id].map {|u| distance(u.loc, game.world.buildings.of(player.id, :base).loc) }.min
+    min_dist = game.world.unitss[player.opponent.id].map {|u| distance(u.loc, game.world.buildings.base(player.id).loc) }.min
     if min_dist && min_dist < 4
       ua = uas.select {|_, a| a.id == :move }.min_by {|loc, _|
-        distance(loc, game.world.buildings.of(player.id, :base).loc)
+        distance(loc, game.world.buildings.base(player.id).loc)
       }
       return ua if ua
     end
@@ -68,7 +68,7 @@ module AI
     # 累計ユニット作成数が4を超えたか、あるいは敵ユニット数が0なら、rage mode
     if 4 <= game.total_spawned_units[player.id] or game.world.unitss[player.opponent.id].size == 0
       ua = uas.select {|_, a| [:move, :harvest_woods, :mine_ore, :attack_barricade].include?(a.id) }.min_by {|loc, _|
-        game.world.move_distance(player.id, loc, game.world.buildings.of(player.opponent.id, :base).loc)
+        game.world.move_distance(player.id, loc, game.world.buildings.base(player.opponent.id).loc)
       }
       ua
     else

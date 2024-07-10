@@ -19,7 +19,7 @@
 <div style="position: absolute; top: <%= click_location[:y] %>px; left: <%= click_location[:x] %>px; height: 2px; width; 2px; border: solid 3px red;"></div>
 <% end %>
 
-<% your_base = turn.game.world.buildings.of(your_player.id, :base) if your_player %>
+<% your_base = turn.game.world.buildings.base(your_player.id) if your_player %>
 <% menu_actionable_locs = menu_action_focus ? turn.menu_actionable_actions(your_player).fetch(menu_action_focus.id, []) : [] %>
 <div class="row">
   <div class="col-md-4 order-md-1 col-12 order-4">
@@ -146,7 +146,7 @@
         </ul>
       </div>
     <% else %>
-      <% enemy_base = turn.game.world.buildings.of(your_player.opponent.id, :base) if your_player %>
+      <% enemy_base = turn.game.world.buildings.base(your_player.opponent.id) if your_player %>
       <p>このゲームの目的は、自分の拠点 <%= your_base&.view %> を守りつつ、相手の拠点 <%= enemy_base&.view%> を破壊することです。</p>
       <p>
       マップ上の未行動のユニット <small>(アイコンに*マークがついています)</small> を選択するか、右のメニューから行動を選択してください。

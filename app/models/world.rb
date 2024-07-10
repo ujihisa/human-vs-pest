@@ -20,8 +20,8 @@ class World
       end
       nil
     end
-    def buildings.of(player_id, bid)
-      self[player_id].find { _1.id == bid }
+    def buildings.base(player_id)
+      self[player_id].find { _1.id == :base }
     end
 
     @buildings = buildings
@@ -212,7 +212,6 @@ class World
         unit =
           if human
             "🧍#{human.hp}"
-            # "🧍#{move_distance(:human, @buildings.of(:human, :base).loc, loc)}"
           elsif pest
             raise "duplicated unit location: #{x}, #{y}" if human
             "🐛#{pest.hp}"

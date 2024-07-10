@@ -36,13 +36,13 @@ class Turn
     }.transform_values {|m|
       case m.location_type
       when :unit
-        base_loc = @game.world.buildings.of(player.id, :base).loc
+        base_loc = @game.world.buildings.base(player.id).loc
         @game.world.unitss[player.id].map(&:loc).select {|loc|
           # 自分の拠点だけは上書き設置できない
           base_loc != loc
         }
       when :base_without_unit
-        base_loc = @game.world.buildings.of(player.id, :base).loc
+        base_loc = @game.world.buildings.base(player.id).loc
         # ユニットがいたらダメ
         @game.world.unitss[player.id].map(&:loc).include?(base_loc) ? [] : [base_loc]
       when :bomb
@@ -88,7 +88,7 @@ class Turn
     in MenuAction(id: :spawn_unit)
       @messages << "#{player.japanese}: #{loc.inspect}にユニットを生産しました。即行動できます"
 
-      new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.of(player.id, :base).loc)
+      new_unit = Unit.new(player_id: player.id, loc: @game.world.buildings.base(player.id).loc)
       @game.world.unitss[player.id] << new_unit
       @game.total_spawned_units[player.id] += 1
       @actionable_units[player.id] += [new_unit]
@@ -210,7 +210,7 @@ class Turn
       p = Player.find(p_id)
       units.each do |unit|
         # 拠点回復
-        if unit.loc == @game.world.buildings.of(p.id, :base).loc && unit.hp < unit.max_hp(@game.world)
+        if unit.loc == @game.world.buildings.base(p.id).loc && unit.hp < unit.max_hp(@game.world)
           new_hp = [unit.hp + 5, unit.max_hp(@game.world)].min
           @messages << "#{p.japanese}: 拠点でユニットが回復しました (HP #{unit.hp} -> #{new_hp})"
           unit.hp = new_hp
