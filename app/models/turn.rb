@@ -97,7 +97,7 @@ class Turn
     end
 
     if @game.winner
-      @messages << "#{game.winner.japanese} が勝利しました!"
+      @messages << "#{Player.find(game.winner).japanese} が勝利しました!"
       @actionable_units = { human: [], pest: [] }
     end
   end
@@ -182,7 +182,7 @@ class Turn
     @actionable_units[player.id] -= [unit]
 
     if @game.winner
-      @messages << "#{game.winner.japanese} が勝利しました!"
+      @messages << "#{Player.find(game.winner).japanese} が勝利しました!"
       @actionable_units = { human: [], pest: [] }
     end
   end

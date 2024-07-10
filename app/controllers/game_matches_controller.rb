@@ -65,7 +65,7 @@ class WorldTag < Live::View
 
     Async do
       while mes = @g[:subscribers][self].dequeue
-        p [:receive, mes]
+        p [:receive, mes, @page.object_id]
 
         break unless @page
         case mes

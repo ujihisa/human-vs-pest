@@ -174,9 +174,9 @@
   <div class="col-md-4 col-8 order-2"
        oncontextmenu="live.forward('world', {type: 'rightclick'}); return false;"
        >
-    <% if turn.game.winner %>
+    <% if winner = turn.game.winner %>
       <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
-        <%= turn.game.winner.japanese %>の勝ち
+        <%= Player.find(winner).japanese %>の勝ち
 
       </div>
     <% end %>

@@ -62,9 +62,9 @@ class GameState
   # Returns `nil` if the game is still ongoing
   def winner
     if @world.buildings.base(:human).nil?
-      Pest
+      :pest
     elsif @world.buildings.base(:pest).nil?
-      Human
+      :human
     else
       nil
     end
@@ -116,9 +116,8 @@ if __FILE__ == $0
   game = turn.game
   turn.draw
 
-  players = [Human, Pest]
   loop do
-    players.each do |player|
+    [Player::Human, Player::Pest].each do |player|
       while ((action, loc) = AI.find_menu_action(turn, player, turn.menu_actionable_actions(player)))
         turn.do_menu_action!(player, action, loc)
       end
