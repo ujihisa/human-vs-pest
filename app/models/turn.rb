@@ -211,7 +211,7 @@ class Turn
       units.each do |unit|
         # 拠点回復
         if unit.loc == @game.world.buildings.base(p.id).loc && unit.hp < unit.max_hp(@game.world)
-          new_hp = [unit.hp + 5, unit.max_hp(@game.world)].min
+          new_hp = [unit.hp + 4, unit.max_hp(@game.world)].min
           @messages << "#{p.japanese}: 拠点でユニットが回復しました (HP #{unit.hp} -> #{new_hp})"
           unit.hp = new_hp
         end

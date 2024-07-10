@@ -10,7 +10,7 @@ Building = Data.define(:player_id, :id, :loc, :hp, :_bd) do
     [:rock,      '🪨', '🪨', false, 3..5, 'HPの数だけ採掘できます。採掘すると鉱石が得られます'],
     [:barricade, '🚧', '🕸', false, 3,    '自分は通れるけど相手だけ通行不能です。初期HPは3で、HPの数だけ攻撃を耐えます。'],
     [:pond,      '🌊', '🌊', false, nil,  '通行不能です'],
-    [:base,      '🏠', '🕳', true,  nil,  'これを失った陣営がゲームオーバーです'],
+    [:base,      '🏠', '🕳', true,  nil,  'これを失った陣営がゲームオーバーです。自拠点の上でターンを終了すると、そのユニットはHPが4回復します。'],
     [:fruits,    '🍓', '🍄', true,  nil,  '自陣営のものならば、ユニットがそこに立つだけで自動で収穫してくれます。収穫すると、種とお金が得られます。<br>収穫後は勝手に🌱に戻ります。'],
     [:flowers,   '🌷', '🦠', true,  nil,  '1ターン後に収穫可能です'],
     [:seeds,     '🌱', '🧬', true,  nil,  '2ターン後に収穫可能です'],
@@ -18,6 +18,7 @@ Building = Data.define(:player_id, :id, :loc, :hp, :_bd) do
     [:trail,     '🛤', '🛤', true,  nil,  '自陣営のみ、1ターンで移動できる距離が増えます (最大3)'],
     [:bomb0,     '💣', '💣', true,  1,    '次ターンから、任意のタイミングで起爆できます'],
     [:bomb,      '💣', '💣', true,  1,    '起爆すると、敵味方関係なく周囲1マス範囲を全て破壊しつくします'],
+    # [:sapling,   '🌱', '🌱', true,  nil,  '10ターン後に木になります'],
   ]
 
   BUILDING_DEFAULTS = defaults.map {|id, human_emoji, pest_emoji, passable, init_hp, desc|

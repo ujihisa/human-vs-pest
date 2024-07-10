@@ -95,7 +95,7 @@
                   <li>自陣営の建設物 <small>(例: 拠点・農地・小道・バリケードなど)</small> の上では減りません。</li>
                   <li>移動だけ死亡することはありません。最低でもHP 1残ります。</li>
                 </ul>
-                拠点の上でターンを完了することで、HPが5回復します。
+                拠点の上でターンを完了することで、HPが4回復します。
               </small>
             </li>
           </ul>
@@ -175,13 +175,13 @@
        oncontextmenu="live.forward('world', {type: 'rightclick'}); return false;"
        >
     <% if winner = turn.game.winner %>
-      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px;">
+      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 64px; z-index: $zindex-modal;">
         <%= Player.find(winner).japanese %>の勝ち
 
       </div>
     <% end %>
     <% if notify_turn_next %>
-      <div style="position: absolute; top: 30%; left: 50%; transform: translate(-30%,-50%); font-size: 64px;">
+      <div style="position: absolute; top: 30%; left: 50%; transform: translate(-30%,-50%); font-size: 64px; z-index: $zindex-modal">
         ターン <%= turn.num %>
       </div>
     <% end %>
@@ -212,6 +212,11 @@
           <div class="hex text-nowrap">
             <%= hex %>
           </div>
+          <% if unit = turn.game.world.unitss.values.flatten(1).find { _1.loc == loc } %>
+            <div class="hex" style="z-index: 1;">
+              <%= image_tag("#{unit.player_id}.png", style: 'height: 32px; width: 32px;') %>
+            </div>
+          <% end %>
           <% if turn.actionable_units.values.flatten(1).map(&:loc).include?(loc) %>
             <div class="hex size64">
               *
